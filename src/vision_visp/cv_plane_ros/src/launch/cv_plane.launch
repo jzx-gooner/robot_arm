@@ -1,0 +1,3 @@
+<launch>
+    <node name="cv_plane" pkg="cv_plane" type="cv_plane" output="screen"/>
+</launch>

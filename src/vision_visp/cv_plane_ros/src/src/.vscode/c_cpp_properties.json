@@ -1,0 +1,37 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/jzx/zed_ros/devel/include/**",
+        "/home/jzx/cv_detection_ros/devel/include/**",
+        "/home/jzx/x_arm/devel/include/**",
+        "/home/jzx/darknet_ros/devel/include/**",
+        "/home/jzx/spinnaker_ws/devel/include/**",
+        "/home/jzx/lio_sam/devel/include/**",
+        "/opt/ros/melodic/include/**",
+        "/home/jzx/gb_msg/devel/include/**",
+        "/home/jzx/x_arm/src/aruco_ros/aruco/include/**",
+        "/home/jzx/x_arm/src/aruco_ros/aruco_ros/include/**",
+        "/home/jzx/cv_detection_ros/src/include/**",
+        "/home/jzx/cv_segmentation_ros/src/include/**",
+        "/home/jzx/darknet_ros/src/darknet_ros/darknet_ros/include/**",
+        "/home/jzx/realsense_3d/src/gb_visual_detection_3d/darknet_ros_3d/include/**",
+        "/home/jzx/lio_sam/src/LIO-SAM/include/**",
+        "/home/jzx/x_arm/src/roboticsgroup_upatras_gazebo_plugins/include/**",
+        "/home/jzx/spinnaker_ws/src/spinnaker_camera_driver/include/**",
+        "/home/jzx/ct/velodyne_ws/src/lidarsim/velodyne_gazebo_plugins/include/**",
+        "/home/jzx/x_arm/src/vision_visp/visp_bridge/include/**",
+        "/home/jzx/x_arm/src/xarm_ros/xarm_api/include/**",
+        "/home/jzx/x_arm/src/xarm_ros/xarm_controller/include/**",
+        "/home/jzx/zed_ros/src/zed-ros-wrapper/zed-ros-interfaces/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}
