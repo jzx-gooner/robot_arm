@@ -52,12 +52,6 @@
 #include "time.h"
 #include "cv_detection/object.h"
 #include "cv_detection/multiobjects.h"
-#include "cv_detection/BoundingBox.h"
-#include "cv_detection/BoundingBoxes.h"
-#include "cv_detection/serverSaveDetectionResult.h"
-
-//x_arm
-#include <xarm_msgs/RobotMsg.h>
 
 using cv::Mat;
 
@@ -66,6 +60,10 @@ using namespace cv;
 #define CV_GREEN cv::Scalar(0, 255, 0)
 #define CV_RED cv::Scalar(0, 0, 255)
 
+// cv::Mat Depthmat,Dec_mat,color_mat;
+// Eigen::Matrix<float,3,3> MTR;//相机坐标旋转矩阵
+// Eigen::Vector3f V_T;//平移向量T
+// Eigen::Matrix<float,3,3> Inner_Transformation_Depth,InnerTransformation_Color;// 相机内参
 
 class MotionFilter
 {
@@ -114,6 +112,8 @@ class MotionFilter
     };
 
 
+
+
 class CvDetection {
 
     public:
@@ -126,32 +126,26 @@ class CvDetection {
         void imgCallback(const sensor_msgs::CompressedImage::ConstPtr &image_msg);
         void infodepthcallback(const sensor_msgs::CameraInfo &caminfo);
         void inforgbcallback(const sensor_msgs::CameraInfo &caminfo);
+
         void depthCallback(const sensor_msgs::ImageConstPtr& msg);
         void depth_to_colorCallback(const realsense2_camera::Extrinsics &extrin);
         void sendMsgs(sensor_msgs::ImagePtr msg);
         void infer(cv::Mat &img);
-        void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
-        bool saveServerClient(cv_detection::serverSaveDetectionResult::Request&req,cv_detection::serverSaveDetectionResult::Response &res);
-        void CvDetection::ArmMove();
+
     private:
         ros::Subscriber img_sub;
         ros::Subscriber depth_sub;
         ros::Subscriber depthtoclolor_sub;
         ros::Subscriber subrgbcaminfo;
         ros::Subscriber subdepthcaminfo;
-        ros::Subscriber xarm_state_sub;
         ros::Publisher cvInfo_pub;
         ros::Publisher object_pub;
         ros::Publisher pointcloud_pub;
-        ros::Publisher detection_pub_2d;
-        ros::Publisher markers_pub;
-        ros::ServiceServer detection_service;
         bool debug_ = true;
         bool USE_DEEPSORT_=false;
         bool Colorinfo= false;
         bool Depthinfo= false;
         bool Convertinfo = false;
-        bool SAVE_DETECTION_RESULT=false;
 
         Eigen::Matrix<float,3,3> MTR;//相机坐标旋转矩阵
         Eigen::Vector3f V_T;//平移向量T
@@ -159,14 +153,6 @@ class CvDetection {
         cv::Mat Depthmat, color_mat;
         std::vector<Objection> objetsin2Dimage;//一幅图中的目标
         std_msgs::Header this_head;
-        typedef enum {
-            ST_INIT = 0,
-            ST_ROUGHT_DETECTION = 1,
-            ST_FINE_DETECTION = 2,
-            ST_COMPLETE = 3
-    } ROBOT_ARM_STATE;
-    void ProcessState();
-    ROBOT_ARM_STATE m_state_ = ST_INIT;
 };
 
 inline void displayDot(cv::Mat &img, const cv::Point2i &dotLoc, double dotScale,
@@ -182,7 +168,7 @@ displayText(cv::Mat &img, std::string &text, const cv::Point2i &textLoc, double 
 }
 
 static const char *cocolabels[] = {
-    "lm", "ls", "car", "motorcycle", "airplane",
+    "person", "bicycle", "car", "motorcycle", "airplane",
     "bus", "train", "truck", "boat", "traffic light", "fire hydrant",
     "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
     "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",

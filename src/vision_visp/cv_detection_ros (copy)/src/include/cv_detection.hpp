@@ -132,7 +132,7 @@ class CvDetection {
         void infer(cv::Mat &img);
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
         bool saveServerClient(cv_detection::serverSaveDetectionResult::Request&req,cv_detection::serverSaveDetectionResult::Response &res);
-        void CvDetection::ArmMove();
+
     private:
         ros::Subscriber img_sub;
         ros::Subscriber depth_sub;
@@ -159,14 +159,6 @@ class CvDetection {
         cv::Mat Depthmat, color_mat;
         std::vector<Objection> objetsin2Dimage;//一幅图中的目标
         std_msgs::Header this_head;
-        typedef enum {
-            ST_INIT = 0,
-            ST_ROUGHT_DETECTION = 1,
-            ST_FINE_DETECTION = 2,
-            ST_COMPLETE = 3
-    } ROBOT_ARM_STATE;
-    void ProcessState();
-    ROBOT_ARM_STATE m_state_ = ST_INIT;
 };
 
 inline void displayDot(cv::Mat &img, const cv::Point2i &dotLoc, double dotScale,
