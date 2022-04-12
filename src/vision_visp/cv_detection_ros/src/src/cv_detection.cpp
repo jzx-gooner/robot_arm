@@ -1,6 +1,12 @@
 //
 // Created by jzx
 //
+//todo:1.需要一个rough_detection_results 变量，保存结果
+//todo：2.需要一个变量记录初始位置和姿态。 
+//todo：3.增加一个状态，叫回到初始位置 ST_INIT，延迟两秒  一个状态叫ST_INFER  
+//todo:3.4 连续在infer状态下，没有找到目标，超过20次，超时报错。如果找到了目标，进入rough detection 。得到所有目标
+// 的3d位姿，如果不成功，返回ST_INFER。如果成功，进入fine detection。
+//todo:4.一个全局变量，保存infer的结果
 #include "cv_detection.hpp"
 #include <cv_bridge/cv_bridge.h>
 #include "dataman.hpp"
@@ -125,17 +131,45 @@ void CvDetection::init()
 
 }
 
-void CvDetection::infer(cv::Mat &img)
+bool CvDetection::infer(cv::Mat &img)
 {
-    auto det_objs = yolo_->commit(img).get();
-    // cout << img.size() << endl;
+    det_objs = yolo_->commit(img).get();
     // cout << "det objets size : " << to_string(det_objs.size()) << std::endl;
-
+    if (det_objs.empty())
     {
-        objetsin2Dimage.clear(); //清空上一幅图像的目标
-        cv_detection::BoundingBoxes bboxes;
-        visualization_msgs::MarkerArray marker_msg;
-        int counter_id = 0;
+        return false;
+    }
+    return true;
+}
+
+bool CvDetection::rough_detection(){
+        // 遍历检测到的目标，可视化，并记录到目标类别
+        // 在这个地方筛选目标，计算出的物体，与所检测到的物体距离不会相差很大。如果相差很大， 返回false
+        for (auto &obj : det_objs)
+        {
+            if (true) //手机是67 obj.class_label == 67 15是猫
+            {
+                uint8_t b, g, r;
+                tie(b, g, r) = random_color(obj.class_label);
+                cv::rectangle(color_mat, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
+                auto name = cocolabels[obj.class_label];
+                auto caption = cv::format("%s %.2f", name, obj.confidence);
+                int width = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
+                cv::rectangle(color_mat, cv::Point(obj.left - 3, obj.top - 33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
+                cv::putText(color_mat, caption, cv::Point(obj.left, obj.top - 5), 0, 1, cv::Scalar::all(0), 2, 16);
+                cv::Rect boundingbox(int(obj.left), int(obj.top), int(obj.right - obj.left), int(obj.bottom - obj.top));
+                auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
+                cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
+                // 坐标系变换 粗检测的坐标系变换
+                int detection_mode = 0;
+                auto temp = Objection(boundingbox, name,detection_mode);
+            }
+        }
+}
+
+
+
+bool CvDetection::fine_detection(){
         // 遍历检测到的目标，可视化，并记录到目标类别
         for (auto &obj : det_objs)
         {
@@ -143,71 +177,21 @@ void CvDetection::infer(cv::Mat &img)
             {
                 uint8_t b, g, r;
                 tie(b, g, r) = random_color(obj.class_label);
-                cv::rectangle(img, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
+                cv::rectangle(color_mat, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
                 auto name = cocolabels[obj.class_label];
                 auto caption = cv::format("%s %.2f", name, obj.confidence);
                 int width = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
-                cv::rectangle(img, cv::Point(obj.left - 3, obj.top - 33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
-                cv::putText(img, caption, cv::Point(obj.left, obj.top - 5), 0, 1, cv::Scalar::all(0), 2, 16);
+                cv::rectangle(color_mat, cv::Point(obj.left - 3, obj.top - 33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
+                cv::putText(color_mat, caption, cv::Point(obj.left, obj.top - 5), 0, 1, cv::Scalar::all(0), 2, 16);
                 cv::Rect boundingbox(int(obj.left), int(obj.top), int(obj.right - obj.left), int(obj.bottom - obj.top));
                 auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
-                cv::circle(img, center, 5, cv::Scalar(b, g, r), -1);
-                // 坐标系变换
-                auto temp = Objection(boundingbox, name);
-                objetsin2Dimage.push_back(temp);
-
-                //装消息
-                cv_detection::BoundingBox bbox;
-                bbox.left = obj.left;
-                bbox.right = obj.right;
-                bbox.top = obj.top;
-                bbox.bottom = obj.bottom;
-                bbox.class_label = obj.class_label;
-                bbox.confidence = obj.confidence;
-                bboxes.bounding_boxes.push_back(bbox);
-
-                //可视化装marker
-                visualization_msgs::Marker bbx_marker;
-                bbx_marker.header.frame_id = "camera_link";
-                bbx_marker.header.stamp = ros::Time::now();
-                bbx_marker.ns = "cv_detection";
-                bbx_marker.id = counter_id++;
-                bbx_marker.type = visualization_msgs::Marker::CUBE;
-                bbx_marker.action = visualization_msgs::Marker::ADD;
-                bbx_marker.pose.position.x = temp.center_point[0];
-                bbx_marker.pose.position.y = temp.center_point[1];
-                bbx_marker.pose.position.z = temp.center_point[2];
-                bbx_marker.pose.orientation.x = 0.0;
-                bbx_marker.pose.orientation.y = 0.0;
-                bbx_marker.pose.orientation.z = 0.0;
-                bbx_marker.pose.orientation.w = 1.0;
-                bbx_marker.scale.x = 20;
-                bbx_marker.scale.y = 10;
-                bbx_marker.scale.z = 2;
-                bbx_marker.color.b = 0;
-                bbx_marker.color.g = obj.confidence * 255.0;
-                bbx_marker.color.r = (1.0 - obj.confidence) * 255.0;
-                bbx_marker.color.a = 0.4;
-                bbx_marker.lifetime = ros::Duration(0.5);
-                marker_msg.markers.push_back(bbx_marker);
+                cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
+                // 坐标系变换 粗检测的坐标系变换
+                auto temp = Objection(boundingbox, name,0);
+          
             }
         }
-
-        //发布检测到的信息 2d
-        bboxes.header.frame_id = "detection_link";
-        bboxes.header.stamp = ros::Time::now();
-        detection_pub_2d.publish(bboxes);
-        cv::imshow("inference_by_sgai_detection", img);
-        cv::waitKey(1);
-
-        //发布marker信息
-        markers_pub.publish(marker_msg);
-
-    }
 }
-
-
-
 
 void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &image_msg)
 {
@@ -224,7 +208,7 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
         std::cout << "could not " << std::endl;
     }
         //如果服务调用了，启动状态机
-        if (SAVE_DETECTION_RESULT)
+    if (SAVE_DETECTION_RESULT)
         {
             m_state_ = ST_INIT;
             SAVE_DETECTION_RESULT = false;
@@ -346,20 +330,18 @@ void CvDetection::ProcessState() {
     switch (m_state_) {
         case ST_INIT: {
             std::cout<<"m_state : ST_INIT"<<std::endl;
-            m_result_ = infer(color_mat);
             //推理图片，如果推理结果正确的话，（检测到了物体，概率比较高，nms做的比较好），就进入粗检测， 如果推理结果不正确的话，还在init状态，推理下一帧
-            if (m_result_ == RESULT_OK) {
+            if (infer(color_mat)) {
                 std::cout<<"m_state : ST_INIT - > ST_ROUGH_DETECTION"<<std::endl;
                 m_state_ = ST_ROUGH_DETECTION;
             }
         }
             break;
 
-        case ST_ROUGHT_DETECTION: {
+        case ST_ROUGH_DETECTION: {
             std::cout<<"m_state : ST_ROUGH_DETECTION"<<std::endl;
-            m_result_ = rough_detection(color_mat);
             //输入是图片推理的目标的坐标，计算出目标位置信息，（x,y,z计算的都在安全区域。没有越界），检测成功，进入细检测，如果没有检测成功，返回到init
-            if (m_result_ == RESULT_OK) {
+            if (rough_detection()) {
                 std::cout<<"m_state : ST_ROUGH_DETECTION -> ST_FINE_DETECTION "<<std::endl;
                 m_state_ = ST_FINE_DETECTION;
             }else{
@@ -372,12 +354,13 @@ void CvDetection::ProcessState() {
             //输入是目标的位置一组 （x,y,z） 。需要loop执行
             std::cout<<"m_state : ST_FINE_DETECTION "<<std::endl;
             for(auto& location ::locations){
+                //到达目标位置
                 ArmMove(location);
-                m_result_ = fine_infer(color_mat);
                 //如果检测成功
-                if (m_result_ == RESULT_OK) { 
+                if (fine_detection()) {) { 
                     ArmMove(new_location);
                 }else{
+                    //如果检测失败，返回到初始位置，再返回到init
                     std::cout<<"fine detection failed"<<std::endl;
                 }
             }

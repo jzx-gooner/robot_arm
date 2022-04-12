@@ -1,7 +1,8 @@
 //
 // Created by jzx
 //
-// 坐标转换，从相机坐标系到世界坐标系 
+// 坐标转换，从相机坐标系到世界坐标系
+// todo :如果计算不到距离，怎么办？ 传进来的也没有距离
 #include "Position_Transform.h"
 #include "include.h"
 
@@ -101,51 +102,52 @@ std::array<int, 3> Position_Transform::Get_XYZ() {
 Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
 
     //0.相机坐标系到工具坐标系的变换矩阵
-        /* 手眼标定得到的转移关系 是眼坐标到手坐标的关系 todo:load config */
-        double qw = 0.7013088518485089;
-        double qx = 0.0039751934245023735;
-        double qy = -0.003477682492098677;
-        double qz = 0.7128379885223908;
-        // double tx = 62.9845508606165;
-        // double ty = -32.21690881661964;
-        // double tz = 19.403200790438897;
-        double tx = 66.8845508606165;
-        double ty = -26.9169088;
-        // double tz = 19.403200790438897;
-        double tz = -152.596799;
-        //旋转矩阵 初始化顺序，wxyz
-        Eigen::Quaterniond q(qw,qx,qy,qz);
-        q.normalize();
-        Eigen::Matrix3d R = q.toRotationMatrix();
-        //平移矩阵
-        Eigen::Vector3d T = Eigen::Vector3d(tx,ty,tz);
-        //相机坐标系到工具坐标系的变换矩阵
-        Eigen::Matrix4d Trans_ObjToTool;
-        Trans_ObjToTool.setIdentity();
-        Trans_ObjToTool.block<3,3>(0,0) = R;
-        Trans_ObjToTool.block<3,1>(0,3) = T;
+    /* 手眼标定得到的转移关系 是眼坐标到手坐标的关系 todo:load config */
+    double qw = 0.7013088518485089;
+    double qx = 0.0039751934245023735;
+    double qy = -0.003477682492098677;
+    double qz = 0.7128379885223908;
+    // double tx = 62.9845508606165;
+    // double ty = -32.21690881661964;
+    // double tz = 19.403200790438897;
+    double tx = 66.8845508606165;
+    double ty = -26.9169088;
+    // double tz = 19.403200790438897;
+    double tz = -152.596799;
+    //旋转矩阵 初始化顺序，wxyz
+    Eigen::Quaterniond q(qw,qx,qy,qz);
+    q.normalize();
+    Eigen::Matrix3d R = q.toRotationMatrix();
+    //平移矩阵
+    Eigen::Vector3d T = Eigen::Vector3d(tx,ty,tz);
+    //相机坐标系到工具坐标系的变换矩阵
+    Eigen::Matrix4d Trans_ObjToTool;
+    Trans_ObjToTool.setIdentity();
+    Trans_ObjToTool.block<3,3>(0,0) = R;
+    Trans_ObjToTool.block<3,1>(0,3) = T;
+
     //1.工具坐标系到基坐标的的变换矩阵
+    //获取当前机器人姿
+    std::vector<double> current_xarm_state =   dataman::GetInstance()->GetXarmState();
 
-        //获取当前机器人姿
-        std::vector<double> current_xarm_state =   dataman::GetInstance()->GetXarmState();
+    std::cout<<"机器人当前位姿"<<current_xarm_state[0]<<","<<current_xarm_state[1]<<","<<current_xarm_state[2]<<std::endl;
 
-        std::cout<<"机器人当前位姿"<<current_xarm_state[0]<<","<<current_xarm_state[1]<<","<<current_xarm_state[2]<<std::endl;
-
-        Eigen::Vector3d ea(current_xarm_state[5], current_xarm_state[4], current_xarm_state[3]);  //0 1 2 对应 z y x
-        Eigen::Matrix3d R_2;
-        R_2 = Eigen::AngleAxisd(ea[0], Eigen::Vector3d::UnitZ()) *
-                        Eigen::AngleAxisd(ea[1], Eigen::Vector3d::UnitY()) *
-                        Eigen::AngleAxisd(ea[2], Eigen::Vector3d::UnitX());
-        cout<<"R_2:"<<R_2<<endl;
-        Eigen::Vector3d T_2 = Eigen::Vector3d(current_xarm_state[0], current_xarm_state[1], current_xarm_state[2]);//当前的pose
-        Eigen::Matrix4d Trans_ToolToBase; // Your Transformation Matrix
-        Trans_ToolToBase.setIdentity();   // Set to Identity to make bottom row of Matrix 0,0,0,1
-        Trans_ToolToBase.block<3,3>(0,0) = R_2;
-        Trans_ToolToBase.block<3,1>(0,3) = T_2;
+    Eigen::Vector3d ea(current_xarm_state[5], current_xarm_state[4], current_xarm_state[3]);  //0 1 2 对应 z y x
+    Eigen::Matrix3d R_2;
+    R_2 = Eigen::AngleAxisd(ea[0], Eigen::Vector3d::UnitZ()) *
+                    Eigen::AngleAxisd(ea[1], Eigen::Vector3d::UnitY()) *
+                    Eigen::AngleAxisd(ea[2], Eigen::Vector3d::UnitX());
+    cout<<"R_2:"<<R_2<<endl;
+    Eigen::Vector3d T_2 = Eigen::Vector3d(current_xarm_state[0], current_xarm_state[1], current_xarm_state[2]);//当前的pose
+    Eigen::Matrix4d Trans_ToolToBase; // Your Transformation Matrix
+    Trans_ToolToBase.setIdentity();   // Set to Identity to make bottom row of Matrix 0,0,0,1
+    Trans_ToolToBase.block<3,3>(0,0) = R_2;
+    Trans_ToolToBase.block<3,1>(0,3) = T_2;
     //2.相机坐标系到基坐标系
         Eigen::Matrix<double,4,4> matrix_ObjToBase;
         matrix_ObjToBase=Trans_ToolToBase*Trans_ObjToTool;
         cout<<"cam_to_base"<<endl<<matrix_ObjToBase<<endl;
+    //2.5 tcp坐标系
     //3.得到基坐标系下的坐标
         Eigen::Vector4d result;
         Eigen::Vector4d ObjPosition;

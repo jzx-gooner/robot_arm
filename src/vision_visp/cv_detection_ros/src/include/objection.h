@@ -27,6 +27,7 @@ class Objection {
         Eigen::Matrix<float,3,3> Inner_Transformation_Depth,InnerTransformation_Color;// 相机内参
         
         cv::Mat Depthmat, color_mat;
+        int detction_mode_ = 0; 
     public:
         vector <array<int ,3>> Real_Point;
         array<int ,3> Point_Camera;
@@ -34,7 +35,7 @@ class Objection {
     //    Mat labels,Stats,centroids;
         string Classname;
         int ClassID;
-        Objection(cv::Rect Box,string name);
+        Objection(cv::Rect Box,string name,int detection_mode);
         void CheckStartPoint();
         void Transform_ImgtoCam();
         void DealRect();//处理对象区域范围

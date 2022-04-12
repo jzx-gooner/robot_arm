@@ -59,6 +59,10 @@
 //x_arm
 #include <xarm_msgs/RobotMsg.h>
 
+
+//yolo
+#include "simple_yolo.hpp"
+
 using cv::Mat;
 
 using namespace cv;
@@ -129,10 +133,12 @@ class CvDetection {
         void depthCallback(const sensor_msgs::ImageConstPtr& msg);
         void depth_to_colorCallback(const realsense2_camera::Extrinsics &extrin);
         void sendMsgs(sensor_msgs::ImagePtr msg);
-        void infer(cv::Mat &img);
+        bool infer(cv::Mat &img);
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
         bool saveServerClient(cv_detection::serverSaveDetectionResult::Request&req,cv_detection::serverSaveDetectionResult::Response &res);
-        void CvDetection::ArmMove();
+        void ArmMove();
+        bool rough_detection();
+        bool fine_detection();
     private:
         ros::Subscriber img_sub;
         ros::Subscriber depth_sub;
@@ -161,12 +167,13 @@ class CvDetection {
         std_msgs::Header this_head;
         typedef enum {
             ST_INIT = 0,
-            ST_ROUGHT_DETECTION = 1,
+            ST_ROUGH_DETECTION = 1,
             ST_FINE_DETECTION = 2,
             ST_COMPLETE = 3
     } ROBOT_ARM_STATE;
     void ProcessState();
-    ROBOT_ARM_STATE m_state_ = ST_INIT;
+    ROBOT_ARM_STATE m_state_ = ST_COMPLETE;
+    std::vector<SimpleYolo::Box> det_objs;
 };
 
 inline void displayDot(cv::Mat &img, const cv::Point2i &dotLoc, double dotScale,
