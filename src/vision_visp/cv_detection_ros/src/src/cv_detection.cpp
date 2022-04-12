@@ -330,6 +330,16 @@ void CvDetection::ProcessState() {
     switch (m_state_) {
         case ST_INIT: {
             std::cout<<"m_state : ST_INIT"<<std::endl;
+            //移动到初始位置。
+            ArmMove(initpostion);
+            std::cout<<"m_state : ST_INIT - > ST_INFER"<<std::endl;
+            //进入infer状态
+            m_state_ = ST_INFER;
+        }
+            break;
+
+        case ST_INFER: {
+            std::cout<<"m_state : ST_INFER"<<std::endl;
             //推理图片，如果推理结果正确的话，（检测到了物体，概率比较高，nms做的比较好），就进入粗检测， 如果推理结果不正确的话，还在init状态，推理下一帧
             if (infer(color_mat)) {
                 std::cout<<"m_state : ST_INIT - > ST_ROUGH_DETECTION"<<std::endl;
@@ -346,7 +356,7 @@ void CvDetection::ProcessState() {
                 m_state_ = ST_FINE_DETECTION;
             }else{
                 std::cout<<"m_state : ST_ROUGH_DETECTION -> ST_INIT "<<std::endl;
-                m_state_ = ST_INIT;
+                m_state_ = ST_INFER;
             }
         }
             break;
@@ -361,7 +371,9 @@ void CvDetection::ProcessState() {
                     ArmMove(new_location);
                 }else{
                     //如果检测失败，返回到初始位置，再返回到init
+                    m_state_ = ST_INIT;
                     std::cout<<"fine detection failed"<<std::endl;
+                    break；
                 }
             }
             //回到初始位置
@@ -370,7 +382,6 @@ void CvDetection::ProcessState() {
             break;
 
         case ST_COMPLETE: {
-
         }
             break;
         default:
