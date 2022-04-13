@@ -33,7 +33,7 @@ Objection::Objection(cv::Rect Box, string name,int detectin_mode = 0){
         std::array<int, 3> center_location=PT.Get_XYZ();//转换
         ostringstream center_ss;
         center_ss << "("<<static_cast<int>(center_location[0])<<","<<static_cast<int>(center_location[1])<<","<<static_cast<int>(center_location[2]) <<")";
-        Eigen::Vector3f grasp_world = PT.Get_ROBOT_TOOL_XYZ();
+        Eigen::Vector3f grasp_world = PT.Get_Rough_XYZ();
         ostringstream grasp_ss;
         grasp_ss<<""<<static_cast<int>(grasp_world[0])<<","<<static_cast<int>(grasp_world[1])<<","<<static_cast<int>(grasp_world[2])<<"";
         center_point.push_back(grasp_world[0]);

@@ -188,7 +188,6 @@ bool CvDetection::fine_detection(){
                 cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
                 // 坐标系变换 粗检测的坐标系变换
                 auto temp = Objection(boundingbox, name,0);
-          
             }
         }
 }

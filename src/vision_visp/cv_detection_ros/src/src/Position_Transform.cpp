@@ -3,6 +3,10 @@
 //
 // 坐标转换，从相机坐标系到世界坐标系
 // todo :如果计算不到距离，怎么办？ 传进来的也没有距离
+// todo :全部调整为eigen
+// todo :   1. get_xyz:正常获得xyz，标准流程
+// todo :   2. get_rought_xyz 计算的距离不能动，算出来的彩色相机的坐标，z轴方向减去10cm,算出来都是高度10cm的点。
+// todo ：  3. get_fine_xyz   默认距离10cm，计算x，y
 #include "Position_Transform.h"
 #include "include.h"
 
@@ -55,8 +59,8 @@ std::array<int,2> Position_Transform::Get_Depth_Pixel(std::array<int,2> Pix){
 }
 
 
-//返回相机坐标系下的位置
-std::array<int, 3> Position_Transform::Get_XYZ() {
+//返回相机坐标系下的位置,定义为粗检测，此时realsense可以获得距离信息
+std::array<int, 3> Position_Transform::Get_Rough_XYZ() {
     Eigen::Vector3f Image_Pix;
     cout<<"Depth_Pix:"<<Depth_Pix.at(0)<<" "<<Depth_Pix.at(1)<<endl;
     Image_Pix<<Depth_Pix.at(0),Depth_Pix.at(1),1.00;
@@ -96,10 +100,8 @@ std::array<int, 3> Position_Transform::Get_XYZ() {
     // PCL_Position.at(2)=Image_Pix(2);
     return PCL_Position;
 }
-
-
 //返回相机坐标系下的位置
-Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
+Eigen::Vector3f Position_Transform::Get_Fine_XYZ() {
 
     //0.相机坐标系到工具坐标系的变换矩阵
     /* 手眼标定得到的转移关系 是眼坐标到手坐标的关系 todo:load config */
@@ -107,12 +109,8 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
     double qx = 0.0039751934245023735;
     double qy = -0.003477682492098677;
     double qz = 0.7128379885223908;
-    // double tx = 62.9845508606165;
-    // double ty = -32.21690881661964;
-    // double tz = 19.403200790438897;
     double tx = 66.8845508606165;
     double ty = -26.9169088;
-    // double tz = 19.403200790438897;
     double tz = -152.596799;
     //旋转矩阵 初始化顺序，wxyz
     Eigen::Quaterniond q(qw,qx,qy,qz);
@@ -128,10 +126,8 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
 
     //1.工具坐标系到基坐标的的变换矩阵
     //获取当前机器人姿
-    std::vector<double> current_xarm_state =   dataman::GetInstance()->GetXarmState();
-
+    std::vector<double> current_xarm_state = dataman::GetInstance()->GetXarmState();
     std::cout<<"机器人当前位姿"<<current_xarm_state[0]<<","<<current_xarm_state[1]<<","<<current_xarm_state[2]<<std::endl;
-
     Eigen::Vector3d ea(current_xarm_state[5], current_xarm_state[4], current_xarm_state[3]);  //0 1 2 对应 z y x
     Eigen::Matrix3d R_2;
     R_2 = Eigen::AngleAxisd(ea[0], Eigen::Vector3d::UnitZ()) *
@@ -143,20 +139,24 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
     Trans_ToolToBase.setIdentity();   // Set to Identity to make bottom row of Matrix 0,0,0,1
     Trans_ToolToBase.block<3,3>(0,0) = R_2;
     Trans_ToolToBase.block<3,1>(0,3) = T_2;
+
+    //2.默认z就是预设定的距离了。
+    float distance_z = 10; 
+
     //2.相机坐标系到基坐标系
-        Eigen::Matrix<double,4,4> matrix_ObjToBase;
-        matrix_ObjToBase=Trans_ToolToBase*Trans_ObjToTool;
-        cout<<"cam_to_base"<<endl<<matrix_ObjToBase<<endl;
+    Eigen::Matrix<double,4,4> matrix_ObjToBase;
+    matrix_ObjToBase=Trans_ToolToBase*Trans_ObjToTool;
+    cout<<"cam_to_base"<<endl<<matrix_ObjToBase<<endl;
     //2.5 tcp坐标系
     //3.得到基坐标系下的坐标
-        Eigen::Vector4d result;
-        Eigen::Vector4d ObjPosition;
-        ObjPosition<<PCL_Position.at(0),PCL_Position.at(1),PCL_Position.at(2),1;
-        result= matrix_ObjToBase*ObjPosition;
-        Eigen::Vector3f temp2;
-        temp2<<result(0),result(1),result(2);
-        cout<<result(0)<<","<<result(1)<<result(2)<<endl;
-        return temp2;
+    Eigen::Vector4d result;
+    Eigen::Vector4d ObjPosition;
+    ObjPosition<<PCL_Position.at(0),PCL_Position.at(1),distance_z,1;
+    result= matrix_ObjToBase*ObjPosition;
+    Eigen::Vector3f temp2;
+    temp2<<result(0),result(1),result(2);
+    cout<<result(0)<<","<<result(1)<<result(2)<<endl;
+    return temp2;
 }
 
 
