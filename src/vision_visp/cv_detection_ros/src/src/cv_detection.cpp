@@ -19,6 +19,8 @@
 using namespace std;
 using namespace cv;
 
+#define routine_detection true
+
 static std::tuple<uint8_t, uint8_t, uint8_t> hsv2bgr(float h, float s, float v)
 {
     const int h_i = static_cast<int>(h * 6);
@@ -141,6 +143,7 @@ bool CvDetection::infer(cv::Mat &img)
     }
     return true;
 }
+
 
 bool CvDetection::rough_detection(){
         // 遍历检测到的目标，可视化，并记录到目标类别
@@ -331,18 +334,28 @@ void CvDetection::ProcessState() {
             std::cout<<"m_state : ST_INIT"<<std::endl;
             //移动到初始位置。
             ArmMove(initpostion);
-            std::cout<<"m_state : ST_INIT - > ST_INFER"<<std::endl;
+            std::cout<<"m_state : ST_INIT - > ST_ROUTINE_DETECTION"<<std::endl;
             //进入infer状态
-            m_state_ = ST_INFER;
+            if(routine_detection){
+                m_state_ = ST_ROUTINE_DETECTION;
+            }else{
+                m_state_ = ST_INFER;
+            }
         }
             break;
 
-        case ST_INFER: {
-            std::cout<<"m_state : ST_INFER"<<std::endl;
+        case ST_ROUTINE_DETECTION: {
+            std::cout<<"m_state : ST_ROUTINE_DETECTION"<<std::endl;
             //推理图片，如果推理结果正确的话，（检测到了物体，概率比较高，nms做的比较好），就进入粗检测， 如果推理结果不正确的话，还在init状态，推理下一帧
             if (infer(color_mat)) {
-                std::cout<<"m_state : ST_INIT - > ST_ROUGH_DETECTION"<<std::endl;
-                m_state_ = ST_ROUGH_DETECTION;
+                for(auto& location ::locations){
+                    //到达目标位置
+                    ArmMove(location);
+                    ArmMove(initlocation);
+                    //如果检测成功
+                }
+                std::cout<<"m_state : ST_INIT - > ST_COMPLETE"<<std::endl;
+                m_state_ = ST_COMPLETE;
             }
         }
             break;
@@ -355,7 +368,7 @@ void CvDetection::ProcessState() {
                 m_state_ = ST_FINE_DETECTION;
             }else{
                 std::cout<<"m_state : ST_ROUGH_DETECTION -> ST_INIT "<<std::endl;
-                m_state_ = ST_INFER;
+                m_state_ = ST_INIT;
             }
         }
             break;
@@ -366,13 +379,13 @@ void CvDetection::ProcessState() {
                 //到达目标位置
                 ArmMove(location);
                 //如果检测成功
-                if (fine_detection()) {) { 
+                if (fine_detection()) {
                     ArmMove(new_location);
                 }else{
                     //如果检测失败，返回到初始位置，再返回到init
                     m_state_ = ST_INIT;
                     std::cout<<"fine detection failed"<<std::endl;
-                    break；
+                    break;
                 }
             }
             //回到初始位置

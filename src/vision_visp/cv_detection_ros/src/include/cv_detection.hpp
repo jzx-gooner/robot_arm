@@ -167,9 +167,10 @@ class CvDetection {
         std_msgs::Header this_head;
         typedef enum {
             ST_INIT = 0,
-            ST_ROUGH_DETECTION = 1,
-            ST_FINE_DETECTION = 2,
-            ST_COMPLETE = 3
+            ST_ROUTINE_DETECTION = 1,
+            ST_ROUGH_DETECTION = 2,
+            ST_FINE_DETECTION = 3,
+            ST_COMPLETE = 4
     } ROBOT_ARM_STATE;
     void ProcessState();
     ROBOT_ARM_STATE m_state_ = ST_COMPLETE;
