@@ -35,7 +35,7 @@ class Objection {
     //    Mat labels,Stats,centroids;
         string Classname;
         int ClassID;
-        Objection(cv::Rect Box,string name,int detection_mode);
+        Objection(cv::Rect Box,string name);
         void CheckStartPoint();
         void Transform_ImgtoCam();
         void DealRect();//处理对象区域范围

@@ -59,7 +59,7 @@
 //x_arm
 #include <xarm_msgs/RobotMsg.h>
 
-
+#include <xarm_api/xarm_ros_client.h>
 //yolo
 #include "simple_yolo.hpp"
 
@@ -136,10 +136,11 @@ class CvDetection {
         bool infer(cv::Mat &img);
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
         bool saveServerClient(cv_detection::serverSaveDetectionResult::Request&req,cv_detection::serverSaveDetectionResult::Response &res);
-        void ArmMove();
+        void ArmMove((std::vector<float> prep_pos);
         bool rough_detection();
         bool fine_detection();
     private:
+        xarm_api::XArmROSClient xarm_c;
         ros::Subscriber img_sub;
         ros::Subscriber depth_sub;
         ros::Subscriber depthtoclolor_sub;
@@ -167,10 +168,11 @@ class CvDetection {
         std_msgs::Header this_head;
         typedef enum {
             ST_INIT = 0,
-            ST_ROUTINE_DETECTION = 1,
-            ST_ROUGH_DETECTION = 2,
-            ST_FINE_DETECTION = 3,
-            ST_COMPLETE = 4
+            ST_INFER =1,
+            ST_ROUTINE_DETECTION = 2,
+            ST_ROUGH_DETECTION = 3,
+            ST_FINE_DETECTION = 4,
+            ST_COMPLETE = 5
     } ROBOT_ARM_STATE;
     void ProcessState();
     ROBOT_ARM_STATE m_state_ = ST_COMPLETE;

@@ -9,9 +9,8 @@ using namespace std;
 
 //detection mode 0 :粗检测
 //detection mode 1 :精检测 此时没有深度信息
-Objection::Objection(cv::Rect Box, string name,int detectin_mode = 0){
+Objection::Objection(cv::Rect Box, string name){
     //1.获取数据
-    detction_mode_ = detectin_mode;
     MTR = dataman::GetInstance()->GetMTR();
     V_T = dataman::GetInstance()->GetV_T();
     Inner_Transformation_Depth = dataman::GetInstance()->GetInnerTransformation_Depth();
@@ -27,23 +26,20 @@ Objection::Objection(cv::Rect Box, string name,int detectin_mode = 0){
     int center_y = (Aera_Objection_R.y+Aera_Objection_R.height/2);
     cout<<"center_x:"<<center_x<<"center_y:"<<center_y<<endl;
     //4.计算三维坐标
-    if(detection_mode_ == 0){
-        cout<<"粗检测"<<endl;
-        Position_Transform PT(array<int,2>{center_x,center_y}, true);
-        std::array<int, 3> center_location=PT.Get_XYZ();//转换
-        ostringstream center_ss;
-        center_ss << "("<<static_cast<int>(center_location[0])<<","<<static_cast<int>(center_location[1])<<","<<static_cast<int>(center_location[2]) <<")";
-        Eigen::Vector3f grasp_world = PT.Get_Rough_XYZ();
-        ostringstream grasp_ss;
-        grasp_ss<<""<<static_cast<int>(grasp_world[0])<<","<<static_cast<int>(grasp_world[1])<<","<<static_cast<int>(grasp_world[2])<<"";
-        center_point.push_back(grasp_world[0]);
-        center_point.push_back(grasp_world[1]);
-        center_point.push_back(grasp_world[2]);
-        center_point.push_back(0);
-        putText(color_mat, grasp_ss.str(), Point(center_x, center_y-60), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 1);
-    }else{
-        cout<<"精检测"<<endl;
-    }
+    cout<<"粗检测"<<endl;
+    Position_Transform PT(array<int,2>{center_x,center_y}, true);
+    std::array<int, 3> center_location=PT.Get_XYZ();//转换
+    ostringstream center_ss;
+    center_ss << "("<<static_cast<int>(center_location[0])<<","<<static_cast<int>(center_location[1])<<","<<static_cast<int>(center_location[2]) <<")";
+    Eigen::Vector3f grasp_world = PT.Get_Rough_XYZ();
+    ostringstream grasp_ss;
+    grasp_ss<<""<<static_cast<int>(grasp_world[0])<<","<<static_cast<int>(grasp_world[1])<<","<<static_cast<int>(grasp_world[2])<<"";
+    center_point.push_back(grasp_world[0]);
+    center_point.push_back(grasp_world[1]);
+    center_point.push_back(grasp_world[2]);
+    center_point.push_back(0);
+    putText(color_mat, grasp_ss.str(), Point(center_x, center_y-60), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 1);
+
     
     //putText(color_mat, center_ss.str(), cv::Point(center_x, center_y), 0, 1, cv::Scalar(0, 255, 0));
     //3.转换彩色图的坐标到深度图,得到深度图的目标框
