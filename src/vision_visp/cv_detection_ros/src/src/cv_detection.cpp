@@ -142,9 +142,14 @@ void CvDetection::infer(cv::Mat &img)
     m_objetsin2Dimage.clear(); //清空上一幅图像的目标
     det_objs = yolo_->commit(img).get();
     // cout << "det objets size : " << to_string(det_objs.size()) << std::endl;
+    cv::Mat show_img;
+    cv::namedWindow("detection_result");
     if (det_objs.empty())
     {
         we_got_something = false;
+        cv::resize(img,show_img,cv::Size(800,640));
+        cv::imshow("detection_result",color_mat);
+        cv::waitKey(1);
     }else{
         for (auto &obj : det_objs)
         {
@@ -166,9 +171,9 @@ void CvDetection::infer(cv::Mat &img)
                 m_objetsin2Dimage.push_back(temp);
             }
         }
-        cv::Mat show_img;
+        
         cv::resize(color_mat,show_img,cv::Size(800,640));
-        cv::imshow("detected_img",color_mat);
+        cv::imshow("detection_result",color_mat);
         cv::waitKey(1);
         we_got_something = true;
     }
@@ -383,6 +388,8 @@ void CvDetection::ProcessState() {
                 }else{
                     m_state_ = ST_FINE_DETECTION;
                 }
+            }else{
+                infer(color_mat);
             }
         }
             break;

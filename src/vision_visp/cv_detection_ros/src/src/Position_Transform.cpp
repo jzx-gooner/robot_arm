@@ -106,9 +106,10 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
         double qx = 0.0039751934245023735;
         double qy = -0.003477682492098677;
         double qz = 0.7128379885223908;
-        double tx = 62.9845508606165;
-        double ty = -32.21690881661964;
-        // double tz = 19.403200790438897;
+        // double tx = 62.9845508606165;
+        // double ty = -32.21690881661964;
+        double tx = 69.1845508606165;
+        double ty = -30.68690881661964;
         double tz = -188.596799;
         //旋转矩阵 初始化顺序，wxyz
         Eigen::Quaterniond q(qw,qx,qy,qz);
