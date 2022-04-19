@@ -136,7 +136,7 @@ class CvDetection {
         bool infer(cv::Mat &img);
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
         bool saveServerClient(cv_detection::serverSaveDetectionResult::Request&req,cv_detection::serverSaveDetectionResult::Response &res);
-        void ArmMove((std::vector<float> prep_pos);
+        void ArmMove(std::vector<float> prep_pos);
         bool rough_detection();
         bool fine_detection();
     private:
@@ -164,7 +164,7 @@ class CvDetection {
         Eigen::Vector3f V_T;//平移向量T
         Eigen::Matrix<float,3,3> Inner_Transformation_Depth,InnerTransformation_Color;// 相机内参
         cv::Mat Depthmat, color_mat;
-        std::vector<Objection> objetsin2Dimage;//一幅图中的目标
+        std::vector<Objection> m_objetsin2Dimage;//一幅图中的目标
         std_msgs::Header this_head;
         typedef enum {
             ST_INIT = 0,
@@ -177,6 +177,7 @@ class CvDetection {
     void ProcessState();
     ROBOT_ARM_STATE m_state_ = ST_COMPLETE;
     std::vector<SimpleYolo::Box> det_objs;
+    std::vector<float> m_initpostion{506,-35,413,M_PI, 0, M_PI};
 };
 
 inline void displayDot(cv::Mat &img, const cv::Point2i &dotLoc, double dotScale,

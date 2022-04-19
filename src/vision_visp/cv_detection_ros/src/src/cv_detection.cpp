@@ -1,12 +1,10 @@
 //
 // Created by jzx
 //
-//todo:1.需要一个rough_detection_results 变量，保存结果
-//todo：2.需要一个变量记录初始位置和姿态。 
-//todo：3.增加一个状态，叫回到初始位置 ST_INIT，延迟两秒  一个状态叫ST_INFER  
-//todo:3.4 连续在infer状态下，没有找到目标，超过20次，超时报错。如果找到了目标，进入rough detection 。得到所有目标
-// 的3d位姿，如果不成功，返回ST_INFER。如果成功，进入fine detection。
-//todo:4.一个全局变量，保存infer的结果
+
+//todo : 1.确定一个初始位置。
+//todo : 2.初始位置确定之后，确定routine检测 可不可以
+
 #include "cv_detection.hpp"
 #include <cv_bridge/cv_bridge.h>
 #include "dataman.hpp"
@@ -141,7 +139,7 @@ void CvDetection::init()
 
 bool CvDetection::infer(cv::Mat &img)
 {
-    objetsin2Dimage.clear(); //清空上一幅图像的目标
+    m_objetsin2Dimage.clear(); //清空上一幅图像的目标
     det_objs = yolo_->commit(img).get();
     // cout << "det objets size : " << to_string(det_objs.size()) << std::endl;
     if (det_objs.empty())
@@ -165,13 +163,12 @@ bool CvDetection::infer(cv::Mat &img)
                 cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
                 // 坐标系变换 粗检测的坐标系变换
                 auto temp = Objection(boundingbox, name);
-                objetsin2Dimage.push_back(temp);
+                m_objetsin2Dimage.push_back(temp);
             }
         }
     }
 
 }
-
 
 bool CvDetection::rough_detection(){
         // 遍历检测到的目标，可视化，并记录到目标类别
@@ -200,7 +197,7 @@ bool CvDetection::rough_detection(){
 
 bool CvDetection::fine_detection(){
         // 遍历检测到的目标，可视化，并记录到目标类别
-        objetsin2Dimage.clear(); //清空上一幅图像的目标
+        m_objetsin2Dimage.clear(); //清空上一幅图像的目标
         for (auto &obj : det_objs)
         {
             if (true) //手机是67 obj.class_label == 67 15是猫
@@ -218,7 +215,7 @@ bool CvDetection::fine_detection(){
                 cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
                 // 坐标系变换 粗检测的坐标系变换
                 auto temp = Objection(boundingbox, name);
-                objetsin2Dimage.push_back(temp);
+                m_objetsin2Dimage.push_back(temp);
             }
         }
 }
@@ -362,8 +359,7 @@ void CvDetection::ProcessState() {
         case ST_INIT: {
             std::cout<<"m_state : ST_INIT"<<std::endl;
             //移动到初始位置  --tod0 确定初始位置
-            std::vector<float> initpostion{0,0,0}
-            ArmMove(initpostion);
+            ArmMove(m_initpostion);
             std::cout<<"m_state : ST_INIT - > ST_INFER"<<std::endl;
             //进入infer状态
             m_state_ = ST_INFER;
@@ -372,7 +368,7 @@ void CvDetection::ProcessState() {
 
         case ST_INFER: {
             std::cout<<"m_state : ST_INFER"<<std::endl;
-            //推理图片，如果推理结果正确的话，objetsin2Dimage 里面已经更新了信息了，粗检测直接拿去用了，精检测先靠近一下，在拿去用，精简测的话，需要更新一下点
+            //推理图片，如果推理结果正确的话，m_objetsin2Dimage 里面已经更新了信息了，粗检测直接拿去用了，精检测先靠近一下，在拿去用，精简测的话，需要更新一下点
             //沿着当前点与目标点的法向量，延伸10cm！
             if (infer(color_mat)) {
                 if(is_routine_detection){
@@ -388,11 +384,12 @@ void CvDetection::ProcessState() {
             std::cout<<"m_state : ST_ROUTINE_DETECTION"<<std::endl;
             //推理图片，如果推理结果正确的话，（检测到了物体，概率比较高，nms做的比较好），就进入粗检测， 如果推理结果不正确的话，还在init状态，推理下一帧
     
-            for(auto& location ::objetsin2Dimage){
+            for(auto& location : m_objetsin2Dimage){
                 //到达目标位置
-                ArmMove(location.center_point);
+                std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],M_PI, 0, M_PI};
+                ArmMove(move_postition);
                 //返回初始位置
-                ArmMove(initlocation);
+                ArmMove(m_initpostion);
                 //如果检测成功
             }
             std::cout<<"m_state : ST_INIT - > ST_COMPLETE"<<std::endl;
@@ -415,12 +412,14 @@ void CvDetection::ProcessState() {
         case ST_FINE_DETECTION: {
             //输入是目标的位置一组 （x,y,z） 。需要loop执行
             std::cout<<"m_state : ST_FINE_DETECTION "<<std::endl;
-            for(auto& location ::objetsin2Dimage){
+            for(auto& location :m_objetsin2Dimage){
                 //到达目标位置
-                ArmMove(location.center_point);
+                std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],M_PI, 0, M_PI};
+                ArmMove(move_postition);
                 //如果检测成功
                 if (fine_detection()) {
-                    ArmMove(new_location);
+                    // ArmMove(new_location);
+                    std::cout<<"检测成功了，精准检测"<<std::endl;
                 }else{
                     //如果检测失败，返回到初始位置，再返回到init
                     m_state_ = ST_INIT;
