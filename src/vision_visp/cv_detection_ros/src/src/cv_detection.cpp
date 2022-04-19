@@ -137,14 +137,14 @@ void CvDetection::init()
 
 }
 
-bool CvDetection::infer(cv::Mat &img)
+void CvDetection::infer(cv::Mat &img)
 {
     m_objetsin2Dimage.clear(); //清空上一幅图像的目标
     det_objs = yolo_->commit(img).get();
     // cout << "det objets size : " << to_string(det_objs.size()) << std::endl;
     if (det_objs.empty())
     {
-        return false;
+        we_got_something = false;
     }else{
         for (auto &obj : det_objs)
         {
@@ -166,6 +166,11 @@ bool CvDetection::infer(cv::Mat &img)
                 m_objetsin2Dimage.push_back(temp);
             }
         }
+        cv::Mat show_img;
+        cv::resize(color_mat,show_img,cv::Size(800,640));
+        cv::imshow("detected_img",color_mat);
+        cv::waitKey(1);
+        we_got_something = true;
     }
 
 }
@@ -227,6 +232,7 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
         if (image_msg->header.seq % 3 == 0) //每隔3帧处理一次
         {
             color_mat = cv::imdecode(cv::Mat(image_msg->data), 1); // convert compressed image data to cv::Mat
+            infer(color_mat);
             dataman::GetInstance()->Setcolormat(color_mat);
         }
     }
@@ -370,8 +376,9 @@ void CvDetection::ProcessState() {
             std::cout<<"m_state : ST_INFER"<<std::endl;
             //推理图片，如果推理结果正确的话，m_objetsin2Dimage 里面已经更新了信息了，粗检测直接拿去用了，精检测先靠近一下，在拿去用，精简测的话，需要更新一下点
             //沿着当前点与目标点的法向量，延伸10cm！
-            if (infer(color_mat)) {
+            if (we_got_something) {
                 if(is_routine_detection){
+                    std::cout<<"m_state : ST_INFER -> ST_ROUTINE_DETECTION"<<std::endl;
                     m_state_ = ST_ROUTINE_DETECTION;
                 }else{
                     m_state_ = ST_FINE_DETECTION;
@@ -386,7 +393,7 @@ void CvDetection::ProcessState() {
     
             for(auto& location : m_objetsin2Dimage){
                 //到达目标位置
-                std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],M_PI, 0, M_PI};
+                std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],-M_PI, 0, 0};
                 ArmMove(move_postition);
                 //返回初始位置
                 ArmMove(m_initpostion);

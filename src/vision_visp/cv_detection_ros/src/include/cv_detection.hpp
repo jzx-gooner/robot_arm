@@ -133,12 +133,13 @@ class CvDetection {
         void depthCallback(const sensor_msgs::ImageConstPtr& msg);
         void depth_to_colorCallback(const realsense2_camera::Extrinsics &extrin);
         void sendMsgs(sensor_msgs::ImagePtr msg);
-        bool infer(cv::Mat &img);
+        void infer(cv::Mat &img);
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
         bool saveServerClient(cv_detection::serverSaveDetectionResult::Request&req,cv_detection::serverSaveDetectionResult::Response &res);
         void ArmMove(std::vector<float> prep_pos);
         bool rough_detection();
         bool fine_detection();
+        CvDetection(): nh_("xarm"){ };
     private:
         xarm_api::XArmROSClient xarm_c;
         ros::Subscriber img_sub;
@@ -159,6 +160,7 @@ class CvDetection {
         bool Depthinfo= false;
         bool Convertinfo = false;
         bool SAVE_DETECTION_RESULT=false;
+        bool we_got_something = false;
 
         Eigen::Matrix<float,3,3> MTR;//相机坐标旋转矩阵
         Eigen::Vector3f V_T;//平移向量T
@@ -177,7 +179,7 @@ class CvDetection {
     void ProcessState();
     ROBOT_ARM_STATE m_state_ = ST_COMPLETE;
     std::vector<SimpleYolo::Box> det_objs;
-    std::vector<float> m_initpostion{506,-35,413,M_PI, 0, M_PI};
+    std::vector<float> m_initpostion{506,-35,413,-M_PI, 0, 0};
 };
 
 inline void displayDot(cv::Mat &img, const cv::Point2i &dotLoc, double dotScale,

@@ -26,7 +26,6 @@ Objection::Objection(cv::Rect Box, string name){
     int center_y = (Aera_Objection_R.y+Aera_Objection_R.height/2);
     cout<<"center_x:"<<center_x<<"center_y:"<<center_y<<endl;
     //4.计算三维坐标
-    cout<<"粗检测"<<endl;
     Position_Transform PT(array<int,2>{center_x,center_y}, true);
     std::array<int, 3> center_location=PT.Get_XYZ();//转换
     ostringstream center_ss;
