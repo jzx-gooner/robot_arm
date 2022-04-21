@@ -1,10 +1,10 @@
 <launch>
     <arg name="namespace_prefix" default="xarm_realsense_handeyecalibration" />
-    <arg name="robot_ip" doc="The IP address of the xarm robot" />
-    <arg name="robot_dof" doc="The degree of freedom of the xarm" />
+    <arg name="robot_ip" doc="The IP address of the xarm robot" default="192.168.1.205"/>
+    <arg name="robot_dof" doc="The degree of freedom of the xarm"  default="6" />
     <!-- PLEASE USE THE PROPER MARKER CONFIGURATION ! -->
-    <arg name="marker_size" doc="Size of the ArUco marker used, in meters" default="0.1" />
-    <arg name="marker_id" doc="The ID of the ArUco marker used" default="105"/>
+    <arg name="marker_size" doc="Size of the ArUco marker used, in meters" default="0.12" />
+    <arg name="marker_id" doc="The ID of the ArUco marker used" default="0"/>
 
     <!-- start the Realsense435 -->
     <include file="$(find realsense2_camera)/launch/rs_camera.launch" />

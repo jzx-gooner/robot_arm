@@ -18,13 +18,13 @@ Objection::Objection(cv::Rect Box, string name){
     Depthmat = dataman::GetInstance()->Getdepthmat();
     color_mat = dataman::GetInstance()->Getcolormat();
     Classname=name;//目标类别名称
-    cout<<"Depthmat.size:"<<Depthmat.size()<<endl;
+    // cout<<"Depthmat.size:"<<Depthmat.size()<<endl;
     //2.初始化RGB图像目标框
     Aera_Objection_R=Area_limit(Box);
     //3.获得目标中心点的坐标
     int center_x = (Aera_Objection_R.x+Aera_Objection_R.width/2);
     int center_y = (Aera_Objection_R.y+Aera_Objection_R.height/2);
-    cout<<"center_x:"<<center_x<<"center_y:"<<center_y<<endl;
+    // cout<<"center_x:"<<center_x<<"center_y:"<<center_y<<endl;
     //4.计算三维坐标
     Position_Transform PT(array<int,2>{center_x,center_y}, true);
     std::array<int, 3> center_location=PT.Get_XYZ();//转换

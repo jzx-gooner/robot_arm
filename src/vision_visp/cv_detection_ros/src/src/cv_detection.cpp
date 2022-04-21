@@ -354,14 +354,13 @@ bool CvDetection::saveServerClient(cv_detection::serverSaveDetectionResult::Requ
 
 void CvDetection::xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states)
 {
-  printf("[XARM_STATE]\n");
   std::vector<double> temp{states->pose[0],states->pose[1],states->pose[2],states->pose[3],states->pose[4],states->pose[5]};
   dataman::GetInstance()->SetXarmState(temp);
 }
 
 //机械臂移动到指定位置
 void CvDetection::ArmMove(std::vector<float> prep_pos){
-    std::cout<<"move arm"<<std::endl;
+    std::cout<<"move arm : "<< prep_pos[0]<<","<<prep_pos[1]<<","<<prep_pos[2]<<std::endl;
     xarm_c.moveLine(prep_pos, 30, 200);
 }
 
@@ -427,7 +426,7 @@ void CvDetection::ProcessState() {
             //输入是目标的位置一组 （x,y,z） 。需要loop执行
             std::cout<<"m_state : ST_FINE_DETECTION "<<std::endl;
             for(auto& location :m_objetsin2Dimage){
-                //到达目标位置
+                //到达目标位置,更新目标位置。往上25cm处。
                 std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],M_PI, 0, M_PI};
                 ArmMove(move_postition);
                 //如果检测成功

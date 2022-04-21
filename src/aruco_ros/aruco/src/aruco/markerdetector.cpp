@@ -39,11 +39,12 @@
 #include <chrono>
 #include <thread>
 #include "debug.h"
-
+#include <opencv2/highgui/highgui.hpp>
 #ifdef _DEBUG
 #include <opencv2/highgui/highgui.hpp>
 #endif
 
+using namespace cv;
 namespace aruco
 {
 
@@ -252,7 +253,7 @@ std::vector<MarkerDetector::MarkerCandidate> MarkerDetector::thresholdAndDetectR
   tev.add("find-cont");
   std::vector<cv::Point> approxCurve;
 
-//#define _aruco_debug_detectrectangles
+#define _aruco_debug_detectrectangles
 #ifdef _aruco_debug_detectrectangles
   cv::Mat simage;
   cv::cvtColor(input,simage,CV_GRAY2BGR);
@@ -629,45 +630,64 @@ void MarkerDetector::detect(const cv::Mat& input, std::vector<Marker>& detectedM
     MarkerCanditates = thresholdAndDetectRectangles(imgToBeThresHolded);
     thres = _thres_Images[0];
 
-    _debug_exec(10,
-        {
-          // only executes when compiled in DEBUG mode if debug level is at least 10
-          // show the thresholded images
-          for (std::size_t i = 0; i < _thres_Images.size(); i++)
-          {
-            std::stringstream sstr; sstr << "thres-" << i;
-            cv::namedWindow(sstr.str(),cv::WINDOW_NORMAL);
-            cv::imshow(sstr.str(),_thres_Images[i]);
-          }
-        }
-    );
+    // for (std::size_t i = 0; i < _thres_Images.size(); i++)
+    //       {
+    //         std::stringstream sstr; sstr << "thres-" << i;
+    //         cv::namedWindow(sstr.str(),cv::WINDOW_NORMAL);
+    //         cv::imshow(sstr.str(),_thres_Images[i]);
+    //       }
+
+    // _debug_exec(10,
+    //     {
+    //       // only executes when compiled in DEBUG mode if debug level is at least 10
+    //       // show the thresholded images
+    //       for (std::size_t i = 0; i < _thres_Images.size(); i++)
+    //       {
+    //         std::stringstream sstr; sstr << "thres-" << i;
+    //         cv::namedWindow(sstr.str(),cv::WINDOW_NORMAL);
+    //         cv::imshow(sstr.str(),_thres_Images[i]);
+    //       }
+    //     }
+    // );
 
     Timer.add("Threshold and Detect rectangles");
 
     // prefilter candidates
-    _debug_exec(10,
-        // only executes when compiled in DEBUG mode if debug level is at least 10
-        // show the thresholded images
-        cv::Mat imrect;
-        cv::cvtColor(imgToBeThresHolded, imrect, CV_GRAY2BGR);
-        for (auto m : MarkerCanditates)
-          m.draw(imrect, cv::Scalar(0, 245, 0));
-        cv::imshow("rect-nofiltered", imrect);
-    );
+    // _debug_exec(10,
+    //     // only executes when compiled in DEBUG mode if debug level is at least 10
+    //     // show the thresholded images
+    //     cv::Mat imrect;
+    //     cv::cvtColor(imgToBeThresHolded, imrect, CV_GRAY2BGR);
+    //     for (auto m : MarkerCanditates)
+    //       m.draw(imrect, cv::Scalar(0, 245, 0));
+    //     cv::imshow("rect-nofiltered", imrect);
+    // );
+      // cv::Mat imrect_1;
+      //   cv::cvtColor(imgToBeThresHolded, imrect_1, CV_GRAY2BGR);
+      //   for (auto m : MarkerCanditates)
+      //     m.draw(imrect_1, cv::Scalar(0, 245, 0));
+      //   cv::imshow("rect-nofiltered", imrect_1);
 
     MarkerCanditates = prefilterCandidates(MarkerCanditates, imgToBeThresHolded.size());
 
     Timer.add("prefilterCandidates");
 
-    _debug_exec(10,
-        // only executes when compiled in DEBUG mode if debug level is at least 10
-        // show the thresholded images
-        cv::Mat imrect;
-        cv::cvtColor(imgToBeThresHolded, imrect, CV_GRAY2BGR);
-        for (auto m : MarkerCanditates)
-          m.draw(imrect, cv::Scalar(0, 245, 0));
-        cv::imshow("rect-filtered", imrect);
-    );
+    // _debug_exec(10,
+    //     // only executes when compiled in DEBUG mode if debug level is at least 10
+    //     // show the thresholded images
+    //     cv::Mat imrect;
+    //     cv::cvtColor(imgToBeThresHolded, imrect, CV_GRAY2BGR);
+    //     for (auto m : MarkerCanditates)
+    //       m.draw(imrect, cv::Scalar(0, 245, 0));
+    //     cv::imshow("rect-filtered", imrect);
+    // );
+
+        //     cv::Mat imrect;
+        // cv::cvtColor(imgToBeThresHolded, imrect, CV_GRAY2BGR);
+        // for (auto m : MarkerCanditates)
+        //   m.draw(imrect, cv::Scalar(0, 245, 0));
+        // cv::imshow("rect-filtered", imrect);
+        // cv::waitKey(1);
 
     // before going on, make sure the piramid is built
     if (buildPyramidThread.joinable())
@@ -720,15 +740,22 @@ void MarkerDetector::detect(const cv::Mat& input, std::vector<Marker>& detectedM
       canonicalMarker.copyTo(canonicalMarkerAux);
       std::string additionalInfo;
 
-      _debug_exec(10,
-          // only executes when compiled in DEBUG mode if debug level is at least 10
-          // show the thresholded images
-          std::stringstream sstr; sstr << "test-" << i;
-          std::cout << "test" << i << std::endl;
-          cv::namedWindow(sstr.str(), cv::WINDOW_NORMAL);
-          cv::imshow(sstr.str(), canonicalMarkerAux);
-          cv::waitKey(0);
-      );
+      // _debug_exec(10,
+      //     // only executes when compiled in DEBUG mode if debug level is at least 10
+      //     // show the thresholded images
+      //     std::stringstream sstr; sstr << "test-" << i;
+      //     std::cout << "test" << i << std::endl;
+      //     cv::namedWindow(sstr.str(), cv::WINDOW_NORMAL);
+      //     cv::imshow(sstr.str(), canonicalMarkerAux);
+      //     cv::waitKey(0);
+      // );
+
+
+        // std::stringstream sstr; sstr << "test-" << i;
+        // std::cout << "test" << i << std::endl;
+        // cv::namedWindow(sstr.str(), cv::WINDOW_NORMAL);
+        // cv::imshow(sstr.str(), canonicalMarkerAux);
+        // cv::waitKey(1);
 
       if (markerIdDetector->detect(canonicalMarkerAux, id, nRotations, additionalInfo))
       {
@@ -739,14 +766,20 @@ void MarkerDetector::detect(const cv::Mat& input, std::vector<Marker>& detectedM
         // sort the points so that they are always in the same order no matter the camera orientation
         std::rotate(detectedMarkers.back().begin(), detectedMarkers.back().begin() + 4 - nRotations,
                     detectedMarkers.back().end());
-        _debug_exec(10,
-            // only executes when compiled in DEBUG mode if debug level is at least 10
-            // show the thresholded images
-            std::stringstream sstr; sstr << "can-" << detectedMarkers.back().id;
-            cv::namedWindow(sstr.str(), cv::WINDOW_NORMAL);
-            cv::imshow(sstr.str(), canonicalMarker);
-            std::cout << "ID=" << id << " " << detectedMarkers.back() << std::endl;
-        );
+        // _debug_exec(10,
+        //     // only executes when compiled in DEBUG mode if debug level is at least 10
+        //     // show the thresholded images
+        //     std::stringstream sstr; sstr << "can-" << detectedMarkers.back().id;
+        //     cv::namedWindow(sstr.str(), cv::WINDOW_NORMAL);
+        //     cv::imshow(sstr.str(), canonicalMarker);
+        //     std::cout << "ID=" << id << " " << detectedMarkers.back() << std::endl;
+        // );
+
+            //      std::stringstream sstr; sstr << "can-" << detectedMarkers.back().id;
+            // cv::namedWindow(sstr.str(), cv::WINDOW_NORMAL);
+            // cv::imshow(sstr.str(), canonicalMarker);
+            // std::cout << "ID=" << id << " " << detectedMarkers.back() << std::endl;
+
         if (_params._thresMethod == THRES_AUTO_FIXED)
           addToImageHist(canonicalMarker, hist);
         }
