@@ -10,6 +10,15 @@
 #include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
 #include "dataman.hpp"
+
+// #include <pcl/visualization/cloud_viewer.h>
+
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_cloud.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/common/common.h>
+
+
 using namespace std ;
 //typedef dlib::matrix<int ,3,1> sample_type;
 //typedef dlib::radial_basis_kernel<sample_type> kernel_type;
@@ -28,6 +37,9 @@ class Objection {
         
         cv::Mat Depthmat, color_mat;
         int detction_mode_ = 0; 
+        
+
+
     public:
         vector <array<int ,3>> Real_Point;
         array<int ,3> Point_Camera;
@@ -42,6 +54,7 @@ class Objection {
         cv::Rect Area_limit(cv::Rect Box);
         float Get_Area_Depth(cv::Rect Box);
         std::vector<int> center_point;//物体中心+位姿
+        pcl::PointCloud<pcl::PointXYZ>::Ptr raw_cloud;
 
 };
 #endif // OBJECTION_H

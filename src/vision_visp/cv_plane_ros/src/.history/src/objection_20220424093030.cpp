@@ -132,7 +132,7 @@ Objection::Objection(cv::Rect Box, string name){
     center_point.push_back(grasp_world[0]);
     center_point.push_back(grasp_world[1]);
     center_point.push_back(grasp_world[2]);
-     //5.获得该框内的所有像素点
+     //4.获得该框内的所有像素点
     std::cout << "图像平面中心点: " << grasp_world[0] << ", " << grasp_world[1] << ", " << grasp_world[2] <<  std::endl;
     pcl::PointCloud<pcl::PointXYZ>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     int w = Aera_Objection_R.width;

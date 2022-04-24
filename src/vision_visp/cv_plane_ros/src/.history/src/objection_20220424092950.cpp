@@ -121,7 +121,6 @@ Objection::Objection(cv::Rect Box, string name){
     int center_x = (Aera_Objection_R.x+Aera_Objection_R.width/2);
     int center_y = (Aera_Objection_R.y+Aera_Objection_R.height/2);
     cout<<"center_x:"<<center_x<<"center_y:"<<center_y<<endl;
-    //4.计算三维坐标
     Position_Transform PT(array<int,2>{center_x,center_y}, true);
     std::array<int, 3> center_location=PT.Get_XYZ();//转换
     ostringstream center_ss;
@@ -132,7 +131,7 @@ Objection::Objection(cv::Rect Box, string name){
     center_point.push_back(grasp_world[0]);
     center_point.push_back(grasp_world[1]);
     center_point.push_back(grasp_world[2]);
-     //5.获得该框内的所有像素点
+     //4.获得该框内的所有像素点
     std::cout << "图像平面中心点: " << grasp_world[0] << ", " << grasp_world[1] << ", " << grasp_world[2] <<  std::endl;
     pcl::PointCloud<pcl::PointXYZ>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     int w = Aera_Objection_R.width;

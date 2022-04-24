@@ -150,7 +150,7 @@ class CvDetection {
         ros::Subscriber xarm_state_sub;
         ros::Publisher cvInfo_pub;
         ros::Publisher object_pub;
-        ros::Publisher pointcloud_pub;
+        ros::Publisher switch_pointcloud_pub;
         ros::Publisher detection_pub_2d;
         ros::Publisher markers_pub;
         ros::ServiceServer detection_service;

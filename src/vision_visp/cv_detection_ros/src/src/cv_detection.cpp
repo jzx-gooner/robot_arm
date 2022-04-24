@@ -104,7 +104,7 @@ void CvDetection::init()
 
     //发布
     object_pub = nh_.advertise<cv_detection::multiobjects>("Objects", 10);
-    pointcloud_pub = nh_.advertise<sensor_msgs::PointCloud2>("/detection/points", 1);
+    switch_pointcloud_pub = nh_.advertise<sensor_msgs::PointCloud2>("/detection_switch/points", 1);
     detection_pub_2d = nh_.advertise<cv_detection::BoundingBoxes>("/detection/2d_detection", 1);
     markers_pub = nh_.advertise<visualization_msgs::MarkerArray>("/detection/markers", 100);
     nh_.param<bool>("is_debug", debug_, true);
@@ -171,7 +171,6 @@ void CvDetection::infer(cv::Mat &img)
                 m_objetsin2Dimage.push_back(temp);
             }
         }
-        
         cv::resize(color_mat,show_img,cv::Size(800,640));
         cv::imshow("detection_result",color_mat);
         cv::waitKey(1);
@@ -398,6 +397,16 @@ void CvDetection::ProcessState() {
             //推理图片，如果推理结果正确的话，（检测到了物体，概率比较高，nms做的比较好），就进入粗检测， 如果推理结果不正确的话，还在init状态，推理下一帧
     
             for(auto& location : m_objetsin2Dimage){
+                //获取物体的点云
+                auto switch_pointcloud = location.raw_cloud;
+                sensor_msgs::PointCloud2 switch_pointcloud_msg;
+                pcl::toROSMsg(*switch_pointcloud, switch_pointcloud_msg);
+                switch_pointcloud_msg.header.frame_id = "world";
+                switch_pointcloud_msg.header.stamp = ros::Time::now();
+                switch_pointcloud_pub.publish(switch_pointcloud_msg);
+
+                //得到这个点云的中心点，计算出点和最后一个机械臂的rotation
+
                 //到达目标位置
                 std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],-M_PI, 0, 0};
                 ArmMove(move_postition);

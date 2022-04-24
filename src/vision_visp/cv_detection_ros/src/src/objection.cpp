@@ -5,10 +5,73 @@
 #include "Algorithm_Objection_3D.h"
 #include "time.h"
 #include "include.h"
+
+
 using namespace std;
 
-//detection mode 0 :粗检测
-//detection mode 1 :精检测 此时没有深度信息
+
+// float variance(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+// {   
+// 	float res = 0.0;//定义平均距离
+// 	float var = 0.0;//定义方差
+// 	float standard_deviation = 0.0;
+// 	int n_points = 0;//定义记录点云数量
+// 	int nres;//定义邻域查找数量
+// 			 //vector是顺序容器的一种。vector 是可变长的动态数组
+// 	std::vector<int> indices(2);//创建一个包含2个int类型数据的vector //创建一个动态数组，存储查询点近邻索引 //等价于这两行代码 using std::vector; vector<int> indices(2);
+// 	std::vector<float> sqr_distances(2);//存储近邻点对应平方距离
+// 	pcl::KdTreeFLANN<pcl::PointXYZ> tree;//以k-d tree方式查找
+// 	tree.setInputCloud(cloud);
+ 
+// 	for (size_t i = 0; i < cloud->size(); ++i)//循环遍历每一个点
+// 	{
+// 		// if (!pcl_isfinite(cloud->points[i].x))//pcl_isfinite函数返回一个布尔值，检查某个值是不是正常数值
+// 		// {
+// 		// 	continue;
+// 		// }
+// 		//Considering the second neighbor since the first is the point itself.
+// 		// kdtree.nearestKSearch (searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) 
+// 		//这是执行 K 近邻查找的成员函数（其中，当k为1的时候，就是最近邻搜索。当k大于1的时候，就是多个最近邻搜索，此处k为2）
+// 		//K为要搜索的邻居数量（k the number of neighbors to search for）
+// 		nres = tree.nearestKSearch(i, 2, indices, sqr_distances);//函数返回值（返回找到的邻域数量），return number of neighbors found
+// 		if (nres == 2)//如果为两个点之间
+// 		{
+// 			res += sqrt(sqr_distances[1]);//sqrt()函数，返回sqr_distances[1]的开平方数
+// 			//std::cout << "sqr_distances[1]：" << sqr_distances[1] << std::endl;//打印与临近点距离的平方值
+// 			++n_points;
+// 		}
+// 	}
+// 	std::cout << "nres：" << nres << std::endl;
+// 	std::cout << "点云总数量n_points：" << n_points << std::endl;
+// 	if (n_points != 0)
+// 	{
+// 		res /= n_points;
+// 		for (size_t i = 0; i < cloud->size(); ++i)
+// 		{
+// 			// if (!pcl_isfinite(cloud->points[i].x))
+// 			// {
+// 			// 	continue;
+// 			// }
+// 			nres = tree.nearestKSearch(i, 2, indices, sqr_distances);
+// 			if (nres == 2)
+// 			{
+// 				var += pow(sqrt(sqr_distances[1]) - res, 2);
+// 				++n_points;
+// 			}
+// 		}	
+// 		if (n_points != 0)
+// 		{
+// 			var /= n_points;
+// 			standard_deviation = sqrt(var);
+// 		}
+// 	}
+// 	std::cout << "平均距离：" << res << std::endl;
+// 	std::cout << "方差：" << var << std::endl;
+// 	std::cout << "标准差：" << standard_deviation << std::endl;
+// 	return res;
+// }
+
+
 Objection::Objection(cv::Rect Box, string name){
     //1.获取数据
     MTR = dataman::GetInstance()->GetMTR();
@@ -38,25 +101,42 @@ Objection::Objection(cv::Rect Box, string name){
     center_point.push_back(grasp_world[2]);
     center_point.push_back(0);
     putText(color_mat, grasp_ss.str(), Point(center_x, center_y-60), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 1);
+    //5.获得该框内的所有像素点
+    std::cout << "图像平面中心点: " << grasp_world[0] << ", " << grasp_world[1] << ", " << grasp_world[2] <<  std::endl;
 
+    pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    int w = Aera_Objection_R.width;
+    int h = Aera_Objection_R.height;
+    int x_start = Aera_Objection_R.x;
+    int y_start = Aera_Objection_R.y;
+    //稀疏化取点
+    cout<<"w "<<w <<"h "<<h<<"x_start "<<x_start<<"y_start "<<y_start<<endl;
+    int stride = 6;
+    for(int i= x_start - w/2; i<x_start+w-stride +w/2; i+=stride){
+        for(int j=y_start -h/2; j<y_start+h-stride +h/2; j+=stride){
+            pcl::PointXYZ CurrentPoint;
+            Position_Transform PT(array<int,2>{i,j}, true);
+            std::array<int, 3> center_location=PT.Get_XYZ();//转换
+            ostringstream center_ss;
+            center_ss << "("<<static_cast<int>(center_location[0])<<","<<static_cast<int>(center_location[1])<<","<<static_cast<int>(center_location[2]) <<")";
+            Eigen::Vector3f grasp_world = PT.Get_ROBOT_TOOL_XYZ();
+            CurrentPoint ={grasp_world[0],grasp_world[1],grasp_world[2]};
+            if(grasp_world[0]==0 or grasp_world[1]==0 or grasp_world[2]==0){
+                continue;
+            }
+            // std::cout<<"x,y,z: "<<grasp_world[0]<<" , "<<grasp_world[1]<<" , "<<grasp_world[2]<<std::endl;
+            raw_cloud->points.push_back(CurrentPoint);
+        }
+    }
+
+    std::cout<<"raw_cloud->points.size()"<<raw_cloud->points.size()<<std::endl;
+
+    // variance(raw_cloud);
+
+    raw_cloud = temp_cloud;
     
-    //putText(color_mat, center_ss.str(), cv::Point(center_x, center_y), 0, 1, cv::Scalar(0, 255, 0));
-    //3.转换彩色图的坐标到深度图,得到深度图的目标框
-    // Position_Transform Start_point_D(array<int,2>{Aera_Objection_R.x,Aera_Objection_R.y}, true);
-    // array<int,2> Start_pix=Start_point_D.Get_Depth_Pixel(array<int,2>{Aera_Objection_R.x,Aera_Objection_R.y});//转换
-    // Box.x=Start_pix.at(0);Box.y=Start_pix.at(1);//更新矩形框
-    // Area_Objection_D=Area_limit(Box);//越界限制下初始化深度图下的矩形区域
 
-    //4.处理矩形框,稀疏化,获取中心点,聚类,获取该类别物体的点云
-    // DealRect();
-    //5.
-    // CheckStartPoint();
-    // Transform_ImgtoCam();//将中心点坐标转换
-    // ostringstream ss;
-    // if (Enable==true)
-    //     ss << "("<<static_cast<int>(Point_Camera.at(0))<<","<<static_cast<int>(Point_Camera.at(1))<<","<<static_cast<int>(Point_Camera.at(2)) <<")";
-    // else
-    //     ss<<"Null WTF";
+
 }
 cv::Rect  Objection::Area_limit(cv::Rect Box) {
     cv::Rect Obj;
