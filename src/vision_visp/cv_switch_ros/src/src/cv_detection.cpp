@@ -157,51 +157,54 @@ void CvDetection::infer(cv::Mat &img)
     cv::imshow("detection_result",segmentation_img);
     cv::setMouseCallback("detection_result", CvDetection::mouseHandleStatic, (void*)this);
     cv::waitKey(1);
-    // if (det_objs.empty() or det_objs.empty()>1 )
-    // {
-    //     we_got_something = false;
-    //     cv::resize(img,show_img,cv::Size(800,640));
-    //     cv::imshow("detection_result",color_mat);
-    //     cv::waitKey(1);
-    // }else{
-    //     for (auto &obj : det_objs)
-    //     {
-    //         if (true) //手机是67 obj.class_label == 67 15是猫
-    //         {
-    //             uint8_t b, g, r;
-    //             tie(b, g, r) = random_color(obj.class_label);
-    //             cv::rectangle(color_mat, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
-    //             auto name = cocolabels[obj.class_label];
-    //             auto caption = cv::format("%s %.2f", name, obj.confidence);
-    //             int width = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
-    //             cv::rectangle(color_mat, cv::Point(obj.left - 3, obj.top - 33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
-    //             cv::putText(color_mat, caption, cv::Point(obj.left, obj.top - 5), 0, 1, cv::Scalar::all(0), 2, 16);
-    //             cv::Rect boundingbox(int(obj.left), int(obj.top), int(obj.right - obj.left), int(obj.bottom - obj.top));
-    //             auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
-    //             cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
-    //             // 坐标系变换 粗检测的坐标系变换
-    //             auto temp = Objection(boundingbox, name);
-    //             m_objetsin2Dimage.push_back(temp);
-    //         }
-    //     }
-    //         //获取物体的点云
-    //     for(auto& location : m_objetsin2Dimage){
-    //             auto switch_pointcloud = location.raw_cloud;
-    //             sensor_msgs::PointCloud2 switch_pointcloud_msg;
-    //             pcl::toROSMsg(*switch_pointcloud, switch_pointcloud_msg);
-    //             switch_pointcloud_msg.header.frame_id = "world";
-    //             switch_pointcloud_msg.header.stamp = ros::Time::now();
-    //             switch_pointcloud_pub.publish(switch_pointcloud_msg);
-    //     }
+    if (det_objs.empty() or det_objs.empty()>1 )
+    {
+        we_got_something = false;
+        cv::resize(img,show_img,cv::Size(800,640));
+        cv::imshow("detection_result",color_mat);
+        cv::waitKey(1);
+    }else{
+        for (auto &obj : det_objs)
+        {
+            if (true) //手机是67 obj.class_label == 67 15是猫
+            {
+                uint8_t b, g, r;
+                tie(b, g, r) = random_color(obj.class_label);
+                cv::rectangle(color_mat, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
+                auto name = cocolabels[obj.class_label];
+                auto caption = cv::format("%s %.2f", name, obj.confidence);
+                int width = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
+                cv::rectangle(color_mat, cv::Point(obj.left - 3, obj.top - 33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
+                cv::putText(color_mat, caption, cv::Point(obj.left, obj.top - 5), 0, 1, cv::Scalar::all(0), 2, 16);
+                cv::Rect boundingbox(int(obj.left), int(obj.top), int(obj.right - obj.left), int(obj.bottom - obj.top));
+                auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
+                cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
+                // 坐标系变换 粗检测的坐标系变换
+                float roll = 0;
+                float segmentation_center_x = 0;
+                float segmentation_center_y = 0;
+                auto temp = Objection(boundingbox, roll,segmentation_center_x,segmentation_center_y,name);
+                m_objetsin2Dimage.push_back(temp);
+            }
+        }
+            //获取物体的点云
+        for(auto& location : m_objetsin2Dimage){
+                auto switch_pointcloud = location.raw_cloud;
+                sensor_msgs::PointCloud2 switch_pointcloud_msg;
+                pcl::toROSMsg(*switch_pointcloud, switch_pointcloud_msg);
+                switch_pointcloud_msg.header.frame_id = "world";
+                switch_pointcloud_msg.header.stamp = ros::Time::now();
+                switch_pointcloud_pub.publish(switch_pointcloud_msg);
+        }
 
 
-    //     // cv::resize(color_mat,show_img,cv::Size(800,640));
-    //     // cv::imshow("手动选择物体",color_mat);
-    //     // cv::setMouseCallback("手动选择物体", CvDetection::mouseHandleStatic, (void*)this);
-    //     // cv::waitKey(1);
-    //     we_got_something = true;
+        // cv::resize(color_mat,show_img,cv::Size(800,640));
+        // cv::imshow("手动选择物体",color_mat);
+        // cv::setMouseCallback("手动选择物体", CvDetection::mouseHandleStatic, (void*)this);
+        // cv::waitKey(1);
+        we_got_something = true;
     
-    // }
+    }
 
 }
 
@@ -225,7 +228,7 @@ bool CvDetection::rough_detection(){
                 cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
                 // 坐标系变换 粗检测的坐标系变换
                 int detection_mode = 0;
-                auto temp = Objection(boundingbox, name);
+                auto temp = Objection(boundingbox, 0,0,0,name);
             }
         }
 }
@@ -249,7 +252,7 @@ bool CvDetection::fine_detection(){
                 auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
                 cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
                 // 坐标系变换 粗检测的坐标系变换
-                auto temp = Objection(boundingbox, name);
+                auto temp = Objection(boundingbox, 0,0,0,name);
                 m_objetsin2Dimage.push_back(temp);
             }
         }

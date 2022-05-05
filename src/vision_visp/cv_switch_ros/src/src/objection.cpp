@@ -72,7 +72,7 @@ using namespace std;
 // }
 
 
-Objection::Objection(cv::Rect Box, string name){
+Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name){
     //1.获取数据
     MTR = dataman::GetInstance()->GetMTR();
     V_T = dataman::GetInstance()->GetV_T();

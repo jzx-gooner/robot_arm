@@ -47,7 +47,8 @@ class Objection {
     //    Mat labels,Stats,centroids;
         string Classname;
         int ClassID;
-        Objection(cv::Rect Box,string name);
+        // Objection(cv::Rect Box,string name);
+        Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name);
         void CheckStartPoint();
         void Transform_ImgtoCam();
         void DealRect();//处理对象区域范围
