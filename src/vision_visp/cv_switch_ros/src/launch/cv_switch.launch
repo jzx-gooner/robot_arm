@@ -1,0 +1,3 @@
+<launch>
+    <node name="cv_switch" pkg="cv_switch" type="cv_switch" output="screen"/>
+</launch>

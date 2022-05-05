@@ -50,11 +50,12 @@
 #include "realsense2_camera/Extrinsics.h"
 #include <chrono>
 #include "time.h"
-#include "cv_detection/object.h"
-#include "cv_detection/multiobjects.h"
-#include "cv_detection/BoundingBox.h"
-#include "cv_detection/BoundingBoxes.h"
-#include "cv_detection/serverSaveDetectionResult.h"
+#include "cv_switch/object.h"
+#include "cv_switch/multiobjects.h"
+#include "cv_switch/BoundingBox.h"
+#include "cv_switch/BoundingBoxes.h"
+#include "cv_switch/serverSaveDetectionResult.h"
+
 
 //x_arm
 #include <xarm_msgs/RobotMsg.h>
@@ -62,6 +63,9 @@
 #include <xarm_api/xarm_ros_client.h>
 //yolo
 #include "simple_yolo.hpp"
+
+//segmentation
+#include "cv_segmentation.hpp"
 
 using cv::Mat;
 
@@ -135,7 +139,7 @@ class CvDetection {
         void sendMsgs(sensor_msgs::ImagePtr msg);
         void infer(cv::Mat &img);
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
-        bool saveServerClient(cv_detection::serverSaveDetectionResult::Request&req,cv_detection::serverSaveDetectionResult::Response &res);
+        bool saveServerClient(cv_switch::serverSaveDetectionResult::Request &req, cv_switch::serverSaveDetectionResult::Response &res);
         void ArmMove(std::vector<float> prep_pos);
         bool rough_detection();
         bool fine_detection();
@@ -144,6 +148,7 @@ class CvDetection {
         CvDetection(): nh_("xarm"){ };
     private:
         xarm_api::XArmROSClient xarm_c;
+        std::shared_ptr<CvSegmentation> cs;
         ros::Subscriber img_sub;
         ros::Subscriber depth_sub;
         ros::Subscriber depthtoclolor_sub;

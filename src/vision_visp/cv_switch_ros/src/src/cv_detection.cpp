@@ -104,9 +104,9 @@ void CvDetection::init()
     xarm_state_sub = nh_.subscribe("/xarm/xarm_states", 1, &CvDetection::xarm_states_callback,this);
 
     //发布
-    object_pub = nh_.advertise<cv_detection::multiobjects>("Objects", 10);
+    object_pub = nh_.advertise<cv_switch::multiobjects>("Objects", 10);
     switch_pointcloud_pub = nh_.advertise<sensor_msgs::PointCloud2>("/detection_switch/points", 1);
-    detection_pub_2d = nh_.advertise<cv_detection::BoundingBoxes>("/detection/2d_detection", 1);
+    detection_pub_2d = nh_.advertise<cv_switch::BoundingBoxes>("/detection/2d_detection", 1);
     markers_pub = nh_.advertise<visualization_msgs::MarkerArray>("/detection/markers", 100);
     nh_.param<bool>("is_debug", debug_, true);
 
@@ -130,6 +130,13 @@ void CvDetection::init()
         return;
     }
 
+
+    //1.load segmentation model
+    ROS_INFO("<< add segmentation model!");
+    std::string segmentaion_model_file = "/home/jzx/IMPORTANT_MODELS/unet.engine";
+    cs = std::make_shared<CvSegmentation>();
+    cs->getEngine(segmentaion_model_file);
+
     //2.初始化机械臂
     xarm_c.init(nh_);
 	xarm_c.motionEnable(1);
@@ -145,7 +152,9 @@ void CvDetection::infer(cv::Mat &img)
     // cout << "det objets size : " << to_string(det_objs.size()) << std::endl;
     cv::Mat show_img;
     cv::namedWindow("detection_result");
-    cv::resize(color_mat,show_img,cv::Size(800,640));
+    // cv::resize(color_mat,show_img,cv::Size(800,640));
+    auto segmentation_img = cs->inference(img);
+    cv::imshow("detection_result",segmentation_img);
     cv::setMouseCallback("detection_result", CvDetection::mouseHandleStatic, (void*)this);
     cv::waitKey(1);
     // if (det_objs.empty() or det_objs.empty()>1 )
@@ -359,7 +368,7 @@ void CvDetection::depth_to_colorCallback(const realsense2_camera::Extrinsics &ex
     }
 }
 
-bool CvDetection::saveServerClient(cv_detection::serverSaveDetectionResult::Request &req, cv_detection::serverSaveDetectionResult::Response &res)
+bool CvDetection::saveServerClient(cv_switch::serverSaveDetectionResult::Request &req, cv_switch::serverSaveDetectionResult::Response &res)
 {
     res.result = "OK";
     SAVE_DETECTION_RESULT = true;

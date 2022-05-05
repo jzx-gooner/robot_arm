@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(cv_detection)
+project(cv_switch)
 add_definitions(-std=c++14)
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 set(CMAKE_CXX_STANDARD 14)
@@ -67,7 +67,7 @@ generate_messages(
 # 5.CFG_EXTRAS  -其他配置选项
 catkin_package(
         INCLUDE_DIRS include
-        LIBRARIES cv_detection
+        LIBRARIES cv_switch
         CATKIN_DEPENDS roscpp rospy geometry_msgs sensor_msgs std_msgs dynamic_reconfigure message_runtime  xarm_msgs xarm_api
         #  DEPENDS system_lib
 )
@@ -76,15 +76,16 @@ catkin_package(
 #指定c++的头文件路径
 include_directories(
         include
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${catkin_INCLUDE_DIRS}
-        ${OpenCV_INCLUDE_DIRS}
         ${CUDA_DIR}/include
+        ${TENSORRT_DIR}/include
+        ${CUDNN_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/tensorRT
         ${CMAKE_CURRENT_SOURCE_DIR}/tensorRT/common
         ${CMAKE_CURRENT_SOURCE_DIR}/tensorRT/infer
-        ${TENSORRT_DIR}/include
-        ${CUDNN_DIR}/include
+        ${catkin_INCLUDE_DIRS}
+        ${OpenCV_INCLUDE_DIRS}
+    
 )
 
 #指定链接库的路径
@@ -106,6 +107,12 @@ set(SRC
         src/objection.cpp
         src/Position_Transform.cpp
         src/dataman.cpp
+        tensorRT/common/cuda_tools.cpp
+        tensorRT/common/ilogger.cpp
+        tensorRT/common/json.cpp
+        tensorRT/common/preprocess_kernel.cu
+        tensorRT/common/trt_tensor.cpp
+        tensorRT/infer/trt_infer.cpp
         )
 # 指定可执行文件 有cuda文件和无cuda文件
 # add_executable(${PROJECT_NAME} ${SRC})
@@ -123,6 +130,9 @@ target_link_libraries(
     )
 target_link_libraries(${PROJECT_NAME} "/usr/lib/x86_64-linux-gnu/libtiff.so")
 
+target_link_libraries(${PROJECT_NAME} nvinfer nvinfer_plugin)
+target_link_libraries(${PROJECT_NAME} cuda cublas cudart cudnn)
+target_link_libraries(${PROJECT_NAME} protobuf pthread)
 # 指定可执行依赖
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
