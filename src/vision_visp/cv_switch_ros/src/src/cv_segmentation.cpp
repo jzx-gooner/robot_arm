@@ -122,8 +122,8 @@ cv::Mat CvSegmentation::inference(cv::Mat& image){
         engine的workspace与input、output等获取的workspace是同一个
         engine的stream与input、output等获取的stream是同一个
     */
-    auto input      = engine_->tensor("images");   // engine->input(0);
-    auto output     = engine_->tensor("output");   // engine->output(0);
+    auto input      = engine_->tensor("image");   // engine->input(0);
+    auto output     = engine_->tensor("prob");   // engine->output(0);
 
     // use max = 1 batch to inference.
     int max_batch_size = 1;

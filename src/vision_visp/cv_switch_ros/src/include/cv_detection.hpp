@@ -137,7 +137,8 @@ class CvDetection {
         void depthCallback(const sensor_msgs::ImageConstPtr& msg);
         void depth_to_colorCallback(const realsense2_camera::Extrinsics &extrin);
         void sendMsgs(sensor_msgs::ImagePtr msg);
-        void infer(cv::Mat &img);
+        void detection_infer(cv::Mat &img);
+        void segmentation_infer(cv::Mat &img);
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
         bool saveServerClient(cv_switch::serverSaveDetectionResult::Request &req, cv_switch::serverSaveDetectionResult::Response &res);
         void ArmMove(std::vector<float> prep_pos);
@@ -170,7 +171,12 @@ class CvDetection {
         bool we_got_something = false;
         bool rect_done_ =false;
         bool draw_box_ = true;
+
+        bool is_in_camera_vison = false;
+
         cv::Rect region_rect_;
+        std::vector<double> xarm_state;
+
 
         Eigen::Matrix<float,3,3> MTR;//相机坐标旋转矩阵
         Eigen::Vector3f V_T;//平移向量T
@@ -180,11 +186,12 @@ class CvDetection {
         std_msgs::Header this_head;
         typedef enum {
             ST_INIT = 0,
-            ST_INFER =1,
+            ST_DETECTION_INFER =1,
             ST_ROUTINE_DETECTION = 2,
             ST_ROUGH_DETECTION = 3,
             ST_FINE_DETECTION = 4,
-            ST_COMPLETE = 5
+            ST_SEGMENTATION_INFER = 5,
+            ST_COMPLETE = 6
     } ROBOT_ARM_STATE;
     void ProcessState();
     ROBOT_ARM_STATE m_state_ = ST_COMPLETE;

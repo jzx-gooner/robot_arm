@@ -72,7 +72,7 @@ using namespace std;
 // }
 
 
-Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name){
+Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name,bool is_in_camera_vison){
     //1.获取数据
     MTR = dataman::GetInstance()->GetMTR();
     V_T = dataman::GetInstance()->GetV_T();
@@ -89,7 +89,7 @@ Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float
     int center_y = (Aera_Objection_R.y+Aera_Objection_R.height/2);
     // cout<<"center_x:"<<center_x<<"center_y:"<<center_y<<endl;
     //4.计算三维坐标
-    Position_Transform PT(array<int,2>{center_x,center_y}, true);
+    Position_Transform PT(array<int,2>{center_x,center_y}, true,is_in_camera_vison);
     std::array<int, 3> center_location=PT.Get_XYZ();//转换
     ostringstream center_ss;
     center_ss << "("<<static_cast<int>(center_location[0])<<","<<static_cast<int>(center_location[1])<<","<<static_cast<int>(center_location[2]) <<")";
@@ -104,38 +104,38 @@ Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float
     //5.获得该框内的所有像素点
     std::cout << "图像平面中心点: " << grasp_world[0] << ", " << grasp_world[1] << ", " << grasp_world[2] <<  std::endl;
 
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    // int w = Aera_Objection_R.width;
-    // int h = Aera_Objection_R.height;
-    // int x_start = Aera_Objection_R.x;
-    // int y_start = Aera_Objection_R.y;
-    // //稀疏化取点
-    // cout<<"w "<<w <<"h "<<h<<"x_start "<<x_start<<"y_start "<<y_start<<endl;
-    // int stride = 1;
-    // for(int i= x_start; i<x_start+w-stride; i+=stride){
-    //     for(int j=y_start; j<y_start+h-stride; j+=stride){
-    //         pcl::PointXYZ CurrentPoint;
-    //         Position_Transform PT(array<int,2>{i,j}, true);
-    //         std::array<int, 3> center_location=PT.Get_XYZ();//转换
+    int w = Aera_Objection_R.width;
+    int h = Aera_Objection_R.height;
+    int x_start = Aera_Objection_R.x;
+    int y_start = Aera_Objection_R.y;
+    //稀疏化取点
+    cout<<"w "<<w <<"h "<<h<<"x_start "<<x_start<<"y_start "<<y_start<<endl;
+    int stride = 1;
+    for(int i= x_start; i<x_start+w-stride; i+=stride){
+        for(int j=y_start; j<y_start+h-stride; j+=stride){
+            pcl::PointXYZ CurrentPoint;
+            Position_Transform PT(array<int,2>{i,j},true, is_in_camera_vison);
+            std::array<int, 3> center_location=PT.Get_XYZ();//转换
 
 
-    //         Eigen::Vector3f grasp_world = PT.Get_ROBOT_TOOL_XYZ();
-    //         CurrentPoint ={grasp_world[0],grasp_world[1],grasp_world[2]};
+            Eigen::Vector3f grasp_world = PT.Get_ROBOT_TOOL_XYZ();
+            CurrentPoint ={grasp_world[0],grasp_world[1],grasp_world[2]};
 
-    //         if(grasp_world[0]==0 or grasp_world[1]==0 or grasp_world[2]==0){
-    //             continue;
-    //         }
-    //         // std::cout<<"real point  x,y,z: "<<grasp_world[0]<<" , "<<grasp_world[1]<<" , "<<grasp_world[2]<<std::endl;
-    //         temp_cloud->points.push_back(CurrentPoint);
-    //     }
-    // }
+            if(grasp_world[0]==0 or grasp_world[1]==0 or grasp_world[2]==0){
+                continue;
+            }
+            // std::cout<<"real point  x,y,z: "<<grasp_world[0]<<" , "<<grasp_world[1]<<" , "<<grasp_world[2]<<std::endl;
+            temp_cloud->points.push_back(CurrentPoint);
+        }
+    }
 
-    // std::cout<<"raw_cloud->points.size()"<<temp_cloud->points.size()<<std::endl;
+    std::cout<<"raw_cloud->points.size()"<<temp_cloud->points.size()<<std::endl;
 
-    // // variance(raw_cloud);
+    // variance(raw_cloud);
 
-    // raw_cloud = temp_cloud;
+    raw_cloud = temp_cloud;
     
 
 
@@ -201,52 +201,4 @@ float Objection::Get_Area_Depth(cv::Rect Box) {
 //        result=result/(Value.size()-sub);
     /////////////////////////////////////
     return result  ;
-}
-void Objection::DealRect() {
-    ///3D点聚类算法
-    ///目标区域稀疏化 获取稀疏化之后的点云信息
-    if (Depthmat.size()==cv::Size(0,0)) {
-        cout<<"Depthmat is null there is no topic pubulish return"<<endl;
-        return;
-    }
-    //截取目标范围的深度图
-    cv::Mat Object_Area_Depth = Depthmat(Area_Objection_D);
-    cout<<"Object_Area_Depth : "<<Object_Area_Depth.size()<<endl;
-    cout<<"Object_Area_info : "<<Object_Area_Depth<<endl;
-
-    //稀疏化采集数据
-    int height=0,width=0;
-    for (int i = 0; i < Object_Area_Depth.rows-Stride; i += Stride) {
-        height++;width=0;
-        cout<<"3"<<endl;
-        for (int j = 0; j < Object_Area_Depth.cols-Stride; j += Stride) {
-            array<int, 2> Sparse_Point{(Area_Objection_D.x + j + Stride / 2)>(WidthCam-1) ? (WidthCam-1):(Area_Objection_D.x + j + Stride / 2), (Area_Objection_D.y + i + Stride / 2)>(HeightCam-1) ? (HeightCam-1):Area_Objection_D.y + i + Stride / 2};
-            cout<<"Sparse_Point : "<<Sparse_Point.at(0)<<"  "<<Sparse_Point.at(1)<<endl;
-            cv::Rect Area_ele(Area_Objection_D.x + j, Area_Objection_D.y + i, Stride, Stride);
-            //获得该区域的距离
-            cout<<"4"<<endl;
-            auto Depth_value = Get_Area_Depth(Area_ele);//稀疏化
-            cout<<"Depth value : "<<Depth_value<<endl;
-            cout<<"Position"<<Sparse_Point.at(1)<<" "<<Sparse_Point.at(0)<<endl;//测试
-            Depthmat.at<uint16_t>(Sparse_Point.at(1), Sparse_Point.at(0)) = Depth_value;
-            cout<<"6"<<endl;
-//            if (Depth_value > 0) {
-            Objection_DepthPoint.push_back(Sparse_Point);
-            auto IP=Position_Transform(Sparse_Point, false).Get_XYZ();
-            Objection_PCL.push_back(IP);
-            width++;
-//            }
-        }
-    }
-
-
-    int Long=Objection_PCL.size();
-    cout<<"Test:"<<Long<<":"<<height*width<<endl;
-    // clock_t StartTime,EndTime;
-    // StartTime=clock();
-    // Algorithm_Objection_3D This_Algorithm(Objection_PCL,height,width);
-    // EndTime=clock();
-    // auto Time=(double)(EndTime - StartTime) / CLOCKS_PER_SEC;
-    // Point_Camera=This_Algorithm.Center_Point;
-    // Real_Point=This_Algorithm.Objection_3D;
 }

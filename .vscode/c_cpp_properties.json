@@ -1,0 +1,31 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/opt/ros/melodic/include/**",
+        "/home/jzx/x_arm/devel/include/**",
+        "/home/jzx/x_arm/src/aruco_ros/aruco/include/**",
+        "/home/jzx/x_arm/src/aruco_ros/aruco_ros/include/**",
+        "/home/jzx/x_arm/src/vision_visp/cv_detection_ros/src/include/**",
+        "/home/jzx/x_arm/src/vision_visp/cv_plane_ros/src/include/**",
+        "/home/jzx/x_arm/src/roboticsgroup_upatras_gazebo_plugins/include/**",
+        "/home/jzx/l515_slam/src/ssl_slam2/include/**",
+        "/home/jzx/ct/velodyne_ws/src/lidarsim/velodyne_gazebo_plugins/include/**",
+        "/home/jzx/x_arm/src/vision_visp/visp_bridge/include/**",
+        "/home/jzx/x_arm/src/xarm_ros/xarm_api/include/**",
+        "/home/jzx/x_arm/src/xarm_ros/xarm_controller/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

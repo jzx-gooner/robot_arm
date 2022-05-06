@@ -103,7 +103,7 @@ std::array<int, 3> Position_Transform::Get_XYZ() {
 }
 
 
-//返回相机坐标系下的位置
+//返回相对于工具坐标系的位置
 Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
 
     //0.相机坐标系到工具坐标系的变换矩阵
@@ -117,19 +117,6 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
         double tx = 69.1845508606165;
         double ty = -30.68690881661964;
         double tz = -188.596799;
-
-
-// translation: 
-//   x: 0.0268392673326
-//   y: -0.033216125011
-//   z: -0.110592919824
-// rotation: 
-//   x: 0.0164554892007
-//   y: 0.00674344927688
-//   z: 0.716091924914
-//   w: 0.697779404855
-
-        // double tz = -209.596799;
         //旋转矩阵 初始化顺序，wxyz
         Eigen::Quaterniond q(qw,qx,qy,qz);
         q.normalize();
@@ -167,16 +154,26 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
         Eigen::Vector4d result;
         Eigen::Vector4d ObjPosition;
         ObjPosition<<PCL_Position.at(0),PCL_Position.at(1),PCL_Position.at(2),1;
-        result= matrix_ObjToBase*ObjPosition;
+        if(in_camera_vision_){
+            result=Trans_ToolToBase*ObjPosition;
+        }else{
+            result= matrix_ObjToBase*ObjPosition;
+        }
+        
+        
         Eigen::Vector3f temp2;
         temp2<<result(0),result(1),result(2);
         // cout<<"输出结果"<<result(0)<<","<<result(1)<<","<<result(2)<<endl;
+
         return temp2;
 }
 
 
+
+
 //构造函数
-Position_Transform::Position_Transform(std::array<int,2> Pix,bool flag) {
+Position_Transform::Position_Transform(std::array<int,2> Pix,bool flag,bool in_camera_vision_) {
+    in_camera_vision_ = in_camera_vision_;
     Get_camera_referance();//得到相机参数
     if (flag)//flag==true means RGB_Pix
     {

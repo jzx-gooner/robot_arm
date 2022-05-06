@@ -18,7 +18,7 @@
 using namespace std;
 using namespace cv;
 
-#define is_routine_detection true
+#define is_routine_detection false
 
 static std::tuple<uint8_t, uint8_t, uint8_t> hsv2bgr(float h, float s, float v)
 {
@@ -119,10 +119,10 @@ void CvDetection::init()
     // string model = "yolox_s";
     auto type = SimpleYolo::Type::V5;
     auto mode = SimpleYolo::Mode::FP32;
-    string model_path = "/home/jzx/IMPORTANT_MODELS/detection_model.trt";
+    string model_path = "/home/jzx/robot_arm_models/yolov5s.engine";
     SimpleYolo::set_device(device_id);
     float confidence_threshold = 0.25f;
-    float nms_threshold = 0.7f;
+    float nms_threshold = 0.5f;
     yolo_ = SimpleYolo::create_infer(model_path, type, device_id, confidence_threshold, nms_threshold);
     if (yolo_ == nullptr)
     {
@@ -133,7 +133,7 @@ void CvDetection::init()
 
     //1.load segmentation model
     ROS_INFO("<< add segmentation model!");
-    std::string segmentaion_model_file = "/home/jzx/IMPORTANT_MODELS/unet.engine";
+    std::string segmentaion_model_file = "/home/jzx/robot_arm_models/unet.engine";
     cs = std::make_shared<CvSegmentation>();
     cs->getEngine(segmentaion_model_file);
 
@@ -145,22 +145,20 @@ void CvDetection::init()
 
 }
 
-void CvDetection::infer(cv::Mat &img)
+void CvDetection::detection_infer(cv::Mat &img)
 {
     m_objetsin2Dimage.clear(); //清空上一幅图像的目标
+    auto raw_iamge = img.clone();
     det_objs = yolo_->commit(img).get();
     // cout << "det objets size : " << to_string(det_objs.size()) << std::endl;
     cv::Mat show_img;
     cv::namedWindow("detection_result");
     // cv::resize(color_mat,show_img,cv::Size(800,640));
-    auto segmentation_img = cs->inference(img);
-    cv::imshow("detection_result",segmentation_img);
-    cv::setMouseCallback("detection_result", CvDetection::mouseHandleStatic, (void*)this);
-    cv::waitKey(1);
+
     if (det_objs.empty() or det_objs.empty()>1 )
     {
         we_got_something = false;
-        cv::resize(img,show_img,cv::Size(800,640));
+        // cv::resize(img,show_img,cv::Size(800,640));
         cv::imshow("detection_result",color_mat);
         cv::waitKey(1);
     }else{
@@ -180,10 +178,7 @@ void CvDetection::infer(cv::Mat &img)
                 auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
                 cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
                 // 坐标系变换 粗检测的坐标系变换
-                float roll = 0;
-                float segmentation_center_x = 0;
-                float segmentation_center_y = 0;
-                auto temp = Objection(boundingbox, roll,segmentation_center_x,segmentation_center_y,name);
+                auto temp = Objection(boundingbox, 0,0,0,name,is_in_camera_vison);
                 m_objetsin2Dimage.push_back(temp);
             }
         }
@@ -199,73 +194,73 @@ void CvDetection::infer(cv::Mat &img)
 
 
         // cv::resize(color_mat,show_img,cv::Size(800,640));
-        // cv::imshow("手动选择物体",color_mat);
-        // cv::setMouseCallback("手动选择物体", CvDetection::mouseHandleStatic, (void*)this);
-        // cv::waitKey(1);
+        cv::imshow("detection_result",color_mat);
+        cv::waitKey(1);
         we_got_something = true;
-    
     }
 
 }
 
-bool CvDetection::rough_detection(){
-        // 遍历检测到的目标，可视化，并记录到目标类别
-        // 在这个地方筛选目标，计算出的物体，与所检测到的物体距离不会相差很大。如果相差很大， 返回false
-        for (auto &obj : det_objs)
-        {
-            if (true) //手机是67 obj.class_label == 67 15是猫
-            {
-                uint8_t b, g, r;
-                tie(b, g, r) = random_color(obj.class_label);
-                cv::rectangle(color_mat, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
-                auto name = cocolabels[obj.class_label];
-                auto caption = cv::format("%s %.2f", name, obj.confidence);
-                int width = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
-                cv::rectangle(color_mat, cv::Point(obj.left - 3, obj.top - 33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
-                cv::putText(color_mat, caption, cv::Point(obj.left, obj.top - 5), 0, 1, cv::Scalar::all(0), 2, 16);
-                cv::Rect boundingbox(int(obj.left), int(obj.top), int(obj.right - obj.left), int(obj.bottom - obj.top));
-                auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
-                cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
-                // 坐标系变换 粗检测的坐标系变换
-                int detection_mode = 0;
-                auto temp = Objection(boundingbox, 0,0,0,name);
-            }
+
+void CvDetection::segmentation_infer(cv::Mat &img){
+        auto segmentation_img = cs->inference(img);
+        cv::Mat binary_image,gray_image;
+        cvtColor(segmentation_img, gray_image, CV_BGR2GRAY);
+        cv::adaptiveThreshold(gray_image, binary_image, 255, CV_ADAPTIVE_THRESH_MEAN_C,CV_THRESH_BINARY_INV, 25, 10); ///局部自适应二值化函数
+     
+            //去噪
+        Mat de_noise = binary_image.clone();
+        //中值滤波
+        
+        medianBlur(binary_image, de_noise, 5);
+        
+        ///////////////////////// 膨胀 ////////////////////
+        Mat dilate_img;
+        Mat element = getStructuringElement(MORPH_RECT, Size(20, 20/*15, 15*/));
+        dilate(de_noise, dilate_img,element);
+  
+       //检测连通域，每一个连通域以一系列的点表示，FindContours方法只能得到第一个域
+        vector<vector<Point>> contours;
+        vector<Vec4i> hierarchy;
+        findContours(binary_image, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);//CV_RETR_EXTERNAL只检测外部轮廓，可根据自身需求进行调整
+        
+        Mat contoursImage(dilate_img.rows, dilate_img.cols, CV_8U, Scalar(255));
+        int index = 0;
+        for (; index >= 0; index = hierarchy[index][0]) {
+            cv::Scalar color(rand() & 255, rand() & 255, rand() & 255);
+                
+            cv::drawContours(contoursImage, contours, index, Scalar(0), 1, 8, hierarchy);//描绘字符的外轮廓
+            
+            Rect rect = boundingRect(contours[index]);//检测外轮廓
+            rectangle(contoursImage, rect, Scalar(0,0,255), 3);//对外轮廓加矩形框
         }
+        
+        // cv::Rect boundingRect = rotatedRect.boundingRect();//返回包含旋转矩形的最小矩形
+        // cv::Mat newSrc = srcCopy(boundingRect);
+        // //ROI区域倾斜矩形的外接矩形，的旋转中心.
+        // cv::Point newCenter;
+        // newCenter.x = rotatedRect.center.x - boundingRect.x;
+        // newCenter.y = rotatedRect.center.y - boundingRect.y;
+
+        cv::imshow("detection_result2",contoursImage);
+        cv::waitKey(1);
+
 }
 
 bool CvDetection::fine_detection(){
-        // 遍历检测到的目标，可视化，并记录到目标类别
-        m_objetsin2Dimage.clear(); //清空上一幅图像的目标
-        for (auto &obj : det_objs)
-        {
-            if (true) //手机是67 obj.class_label == 67 15是猫
-            {
-                uint8_t b, g, r;
-                tie(b, g, r) = random_color(obj.class_label);
-                cv::rectangle(color_mat, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
-                auto name = cocolabels[obj.class_label];
-                auto caption = cv::format("%s %.2f", name, obj.confidence);
-                int width = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
-                cv::rectangle(color_mat, cv::Point(obj.left - 3, obj.top - 33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
-                cv::putText(color_mat, caption, cv::Point(obj.left, obj.top - 5), 0, 1, cv::Scalar::all(0), 2, 16);
-                cv::Rect boundingbox(int(obj.left), int(obj.top), int(obj.right - obj.left), int(obj.bottom - obj.top));
-                auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
-                cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
-                // 坐标系变换 粗检测的坐标系变换
-                auto temp = Objection(boundingbox, 0,0,0,name);
-                m_objetsin2Dimage.push_back(temp);
-            }
-        }
+
+    return false;
 }
 
 void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &image_msg)
 {
     try
     {
-        if (image_msg->header.seq % 5 == 0) //每隔3帧处理一次
+        if (image_msg->header.seq % 3 == 0) //每隔3帧处理一次
         {
             color_mat = cv::imdecode(cv::Mat(image_msg->data), 1); // convert compressed image data to cv::Mat
-            infer(color_mat);
+            detection_infer(color_mat);
+            segmentation_infer(color_mat);
             dataman::GetInstance()->Setcolormat(color_mat);
         }
     }
@@ -425,8 +420,8 @@ void CvDetection::onMouse( int event, int x, int y, int flags)
 
 void CvDetection::xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states)
 {
-  std::vector<double> temp{states->pose[0],states->pose[1],states->pose[2],states->pose[3],states->pose[4],states->pose[5]};
-  dataman::GetInstance()->SetXarmState(temp);
+  xarm_state = {states->pose[0],states->pose[1],states->pose[2],states->pose[3],states->pose[4],states->pose[5]};
+  dataman::GetInstance()->SetXarmState(xarm_state);
 }
 
 //机械臂移动到指定位置
@@ -435,31 +430,33 @@ void CvDetection::ArmMove(std::vector<float> prep_pos){
     xarm_c.moveLine(prep_pos, 30, 200);
 }
 
+
 void CvDetection::ProcessState() {
     switch (m_state_) {
         case ST_INIT: {
             std::cout<<"m_state : ST_INIT"<<std::endl;
             //移动到初始位置  --tod0 确定初始位置
             ArmMove(m_initpostion);
-            std::cout<<"m_state : ST_INIT - > ST_INFER"<<std::endl;
+            std::cout<<"m_state : ST_INIT - > ST_DETECTION_INFER"<<std::endl;
             //进入infer状态
-            m_state_ = ST_INFER;
+            m_state_ = ST_DETECTION_INFER;
         }
             break;
 
-        case ST_INFER: {
-            std::cout<<"m_state : ST_INFER"<<std::endl;
+        case ST_DETECTION_INFER: {
+            std::cout<<"m_state : ST_DETECTION_INFER"<<std::endl;
             //推理图片，如果推理结果正确的话，m_objetsin2Dimage 里面已经更新了信息了，粗检测直接拿去用了，精检测先靠近一下，在拿去用，精简测的话，需要更新一下点
             //沿着当前点与目标点的法向量，延伸10cm！
             if (we_got_something) {
                 if(is_routine_detection){
-                    std::cout<<"m_state : ST_INFER -> ST_ROUTINE_DETECTION"<<std::endl;
+                    std::cout<<"m_state : ST_DETECTION_INFER -> ST_ROUTINE_DETECTION"<<std::endl;
                     m_state_ = ST_ROUTINE_DETECTION;
                 }else{
                     m_state_ = ST_FINE_DETECTION;
+                    is_in_camera_vison = true;
                 }
             }else{
-                infer(color_mat);
+                detection_infer(color_mat);
             }
         }
             break;
@@ -476,49 +473,32 @@ void CvDetection::ProcessState() {
                 //得到这个点云的中心点，计算出点和最后一个机械臂的rotation
 
                 //到达目标位置
-                // std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],-M_PI, 0, 0};
-                // ArmMove(move_postition);
-                // //返回初始位置
-                // ArmMove(m_initpostion);
-                // //如果检测成功
+                std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],M_PI, 0, 0};
+                ArmMove(move_postition);
+                //返回初始位置
+                ArmMove(m_initpostion);
+                //如果检测成功
             }
             std::cout<<"m_state : ST_INIT - > ST_COMPLETE"<<std::endl;
             m_state_ = ST_COMPLETE;
             }
             break;
 
-        case ST_ROUGH_DETECTION: {
-            std::cout<<"m_state : ST_ROUGH_DETECTION"<<std::endl;
-            //输入是图片推理的目标的坐标，计算出目标位置信息，（x,y,z计算的都在安全区域。没有越界），检测成功，进入细检测，如果没有检测成功，返回到init
-            if (rough_detection()) {
-                std::cout<<"m_state : ST_ROUGH_DETECTION -> ST_FINE_DETECTION "<<std::endl;
-                m_state_ = ST_FINE_DETECTION;
-            }else{
-                std::cout<<"m_state : ST_ROUGH_DETECTION -> ST_INIT "<<std::endl;
-                m_state_ = ST_INIT;
-            }
-        }
-            break;
         case ST_FINE_DETECTION: {
             //输入是目标的位置一组 （x,y,z） 。需要loop执行
             std::cout<<"m_state : ST_FINE_DETECTION "<<std::endl;
-            for(auto& location :m_objetsin2Dimage){
-                //到达目标位置,更新目标位置。往上25cm处。
-                std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],M_PI, 0, M_PI};
-                ArmMove(move_postition);
-                //如果检测成功
-                if (fine_detection()) {
-                    // ArmMove(new_location);
-                    std::cout<<"检测成功了，精准检测"<<std::endl;
-                }else{
-                    //如果检测失败，返回到初始位置，再返回到init
-                    m_state_ = ST_INIT;
-                    std::cout<<"fine detection failed"<<std::endl;
-                    break;
-                }
-            }
-            //回到初始位置
-            m_state_ = ST_COMPLETE;
+            //根据服务的消息，确定处理哪一个，所以不loop了
+            int index = 0;
+            auto location = m_objetsin2Dimage[index];
+            std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2]+50,xarm_state[3], xarm_state[4], xarm_state[5]};
+            ArmMove(move_postition);
+            m_state_ = ST_SEGMENTATION_INFER;
+        }
+            break;
+
+        case ST_SEGMENTATION_INFER: {
+            std::cout<<"m_state : ST_SEGMENTATION_INFER "<<std::endl;
+            //创建一个全局变量，计算当前的roll 和  中心点 得到这个位置
         }
             break;
 
