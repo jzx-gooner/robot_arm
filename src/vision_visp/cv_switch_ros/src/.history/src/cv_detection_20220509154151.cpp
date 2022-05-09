@@ -695,9 +695,9 @@ void CvDetection::ProcessState() {
             auto location = m_objetsin2Dimage[index];
             
             //0.算出来的点
-            Eigen::Vector4d input(location.center_point[0], location.center_point[1], location.center_point[2],1);
+            Eigen::Vector3f input(location.center_point[0], location.center_point[1], location.center_point[2]);
             //1.输出的点
-            Eigen::Vector4d output;
+            Eigen::Vector3f output;
             //2.转换矩阵
             double qw = 0.7013088518485089;
             double qx = 0.0039751934245023735;
@@ -718,10 +718,10 @@ void CvDetection::ProcessState() {
             Trans_ObjToTool.block<3,3>(0,0) = R;
             Trans_ObjToTool.block<3,1>(0,3) = T;
             //计算新点
-            output = Trans_ObjToTool.inverse()*input;
+            output = Trans_ObjToTool*input;
 
 
-            std::vector<float> move_postition{output(0),output(1),output(2)+50,xarm_state[3], xarm_state[4], xarm_state[5]};
+            std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2]+50,xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
             m_state_ = ST_SEGMENTATION_INFER;
         }

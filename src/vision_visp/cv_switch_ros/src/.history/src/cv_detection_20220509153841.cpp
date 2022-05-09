@@ -694,34 +694,10 @@ void CvDetection::ProcessState() {
             int index = 0;
             auto location = m_objetsin2Dimage[index];
             
-            //0.算出来的点
-            Eigen::Vector4d input(location.center_point[0], location.center_point[1], location.center_point[2],1);
-            //1.输出的点
-            Eigen::Vector4d output;
-            //2.转换矩阵
-            double qw = 0.7013088518485089;
-            double qx = 0.0039751934245023735;
-            double qy = -0.003477682492098677;
-            double qz = 0.7128379885223908;
-            double tx = 69.1845508606165;
-            double ty = -30.68690881661964;
-            double tz = -188.596799;
-            //旋转矩阵 初始化顺序，wxyz
-            Eigen::Quaterniond q(qw,qx,qy,qz);
-            q.normalize();
-            Eigen::Matrix3d R = q.toRotationMatrix();
-            //平移矩阵
-            Eigen::Vector3d T = Eigen::Vector3d(tx,ty,tz);
-            //相机坐标系到工具坐标系的变换矩阵
-            Eigen::Matrix4d Trans_ObjToTool;
-            Trans_ObjToTool.setIdentity();
-            Trans_ObjToTool.block<3,3>(0,0) = R;
-            Trans_ObjToTool.block<3,1>(0,3) = T;
-            //计算新点
-            output = Trans_ObjToTool.inverse()*input;
+            //算出来的点
+            Eigen::Vector3d(location.center_point[0], location.center_point[1], location.center_point[2]）；
 
-
-            std::vector<float> move_postition{output(0),output(1),output(2)+50,xarm_state[3], xarm_state[4], xarm_state[5]};
+            std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2]+50,xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
             m_state_ = ST_SEGMENTATION_INFER;
         }

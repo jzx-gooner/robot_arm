@@ -695,9 +695,9 @@ void CvDetection::ProcessState() {
             auto location = m_objetsin2Dimage[index];
             
             //0.算出来的点
-            Eigen::Vector4d input(location.center_point[0], location.center_point[1], location.center_point[2],1);
+            Eigen::Vector3f input(location.center_point[0], location.center_point[1], location.center_point[2]);
             //1.输出的点
-            Eigen::Vector4d output;
+            Eigen::Vector4f output;
             //2.转换矩阵
             double qw = 0.7013088518485089;
             double qx = 0.0039751934245023735;
@@ -713,7 +713,7 @@ void CvDetection::ProcessState() {
             //平移矩阵
             Eigen::Vector3d T = Eigen::Vector3d(tx,ty,tz);
             //相机坐标系到工具坐标系的变换矩阵
-            Eigen::Matrix4d Trans_ObjToTool;
+            Eigen::Matrix4f Trans_ObjToTool;
             Trans_ObjToTool.setIdentity();
             Trans_ObjToTool.block<3,3>(0,0) = R;
             Trans_ObjToTool.block<3,1>(0,3) = T;

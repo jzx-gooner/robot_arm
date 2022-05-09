@@ -121,136 +121,6 @@ Vec4d lines_intersection(const Vec4d l1, const Vec4d l2)
 }
 
 
-// 画夹角
-void draw_angle(Mat img, const Point2d p0, const Point2d p1, const Point2d p2, const double radius, const Scalar color, const int thickness)
-{
-    // 计算直线的角度
-    double angle1 = atan2(-(p1.y - p0.y), (p1.x - p0.x)) * 180 / CV_PI;
-    double angle2 = atan2(-(p2.y - p0.y), (p2.x - p0.x)) * 180 / CV_PI;
-    // 计算主轴的角度
-    double angle = angle1 <= 0 ? -angle1 : 360 - angle1;
-    // 计算圆弧的结束角度
-    double end_angle = (angle2 < angle1) ? (angle1 - angle2) : (360 - (angle2 - angle1));
-    if (end_angle > 180)
-    {
-        angle = angle2 <= 0 ? -angle2 : 360 - angle2;
-        end_angle = 360 - end_angle;
-    }
-    // 画圆弧
-    ellipse(img, p0, Size(radius, radius), angle, 0, end_angle, color, thickness);
-}
-
-// 画箭头
-void draw_arrow(Mat img, const Point2d p1, const Point2d p2, const double angle, const double length, const Scalar color, const int thickness)
-{
-    double l1 = length * cos(angle * CV_PI / 180), l2 = length * sin(angle * CV_PI / 180);
-    Point2d p3(0, 0), p4(0, 0);
-    int i = (p2.x > p1.x) ? 1 : -1; // i,j代表p2、p3、p4相对于p0的正负
-    int j = (p2.y > p1.y) ? 1 : -1;
-    double a1 = abs(atan((p2.y - p1.y) / (p2.x - p1.x))); // 直线p1p2相对于x轴的角度，取正值
-    double w1 = l1 * cos(a1), h1 = l1 * sin(a1);          // 用于计算p2相对于p0的宽高
-    Point2d p0(p2.x - w1 * i, p2.y - h1 * j);
-    double a2 = 90 * CV_PI / 180 - a1;           // 直线p3p4相对于x轴的角度
-    double w2 = l2 * cos(a2), h2 = l2 * sin(a2); // 用于计算p3和p4相对于p0的宽高
-    p3 = Point2d(p0.x - w2 * i, p0.y + h2 * j);
-    p4 = Point2d(p0.x + w2 * i, p0.y - h2 * j);
-    line(img, p2, p3, color, 2); //画箭头
-    line(img, p2, p4, color, 2);
-}
-
-// 画虚线
-void draw_dotted_line(Mat img, const Point2d p1, const Point2d p2, const Scalar color, const int thickness)
-{
-    double n = 15; // 小线段的长度
-    double w = p2.x - p1.x, h = p2.y - p1.y;
-    double l = sqrtl(w * w + h * h);
-    // 矫正小线段长度，使小线段个数为奇数
-    int m = l / n;
-    m = m % 2 ? m : m + 1;
-    n = l / m;
-
-    circle(img, p1, 1, color, thickness); // 画起点
-    circle(img, p2, 1, color, thickness); // 画终点
-    // 画中间的小线段
-    if (p1.y == p2.y) //水平线：y = m
-    {
-        double x1 = min(p1.x, p2.x);
-        double x2 = max(p1.x, p2.x);
-        for (double x = x1, n1 = 2 * n; x < x2; x = x + n1)
-            line(img, Point2d(x, p1.y), Point2d(x + n, p1.y), color, thickness);
-    }
-    else if (p1.x == p2.x) //垂直线, x = m
-    {
-        double y1 = min(p1.y, p2.y);
-        double y2 = max(p1.y, p2.y);
-        for (double y = y1, n1 = 2 * n; y < y2; y = y + n1)
-            line(img, Point2d(p1.x, y), Point2d(p1.x, y + n), color, thickness);
-    }
-    else
-    {
-        // 直线方程的两点式：(y-y1)/(y2-y1)=(x-x1)/(x2-x1) -> y = (y2-y1)*(x-x1)/(x2-x1)+y1
-        double n1 = n * abs(w) / l;
-        double k = h / w;
-        double x1 = min(p1.x, p2.x);
-        double x2 = max(p1.x, p2.x);
-        for (double x = x1, n2 = 2 * n1; x < x2; x = x + n2)
-        {
-            Point p3 = Point2d(x, k * (x - p1.x) + p1.y);
-            Point p4 = Point2d(x + n1, k * (x + n1 - p1.x) + p1.y);
-            line(img, p3, p4, color, thickness);
-        }
-    }
-}
-
-// 画延长线
-void draw_extension_line(Mat img, const Vec4d l, Scalar color)
-{
-    double x1 = l[0], y1 = l[1], x2 = l[2], y2 = l[3];
-    double a = -(y2 - y1), b = x2 - x1, c = (y2 - y1) * x1 - (x2 - x1) * y1;
-    Point2d p1(0, 0), p2(0, 0);
-    if (b != 0)
-    {
-        p1 = Point2d(0, -c / b);
-        p2 = Point2d(img.cols, ((-a * img.cols - c) / b));
-    }
-    else
-    {
-        p1 = Point2d(-c / a, 0);
-        p2 = Point2d(-c / a, img.rows);
-    }
-    draw_dotted_line(img, p1, p2, color, 1);
-}
-
-// 画图
-void draw(Mat img, const Vec4d l1, const Vec4d l2)
-{
-    Vec4d v = lines_intersection(l1, l2); // 判断是否相交，并计算交点和夹角
-
-    line(img, Point2d(l1[0], l1[1]), Point2d(l1[2], l1[3]), Scalar(255, 0, 0), 2);               // 画蓝线
-    draw_arrow(img, Point2d(l1[0], l1[1]), Point2d(l1[2], l1[3]), 20, 20, Scalar(255, 0, 0), 2); // 画箭头
-
-    line(img, Point2d(l2[0], l2[1]), Point2d(l2[2], l2[3]), Scalar(0, 255, 0), 2);               // 画绿线
-    draw_arrow(img, Point2d(l2[0], l2[1]), Point2d(l2[2], l2[3]), 20, 20, Scalar(0, 255, 0), 2); // 画箭头
-
-    draw_extension_line(img, l1, Scalar(255, 0, 0)); // 画延长线
-    draw_extension_line(img, l2, Scalar(0, 255, 0)); // 画延长线
-
-    draw_angle(img, Point2d(v[1], v[2]), Point2d(l1[2], l1[3]), Point2d(l2[2], l2[3]), 15, Scalar(0, 0, 255), 1); // 画夹角
-
-    if (v[0])
-    {
-        string s = "(" + to_string(v[1]) + ", " + to_string(v[2]) + ") " + to_string(v[3]);
-        putText(img, s, Point2d(10, 25), cv::FONT_HERSHEY_COMPLEX, 0.5, Scalar(0, 255, 0));
-        circle(img, Point2d(v[1], v[2]), 2, Scalar(0, 0, 255), 2); // 画交点
-    }
-    else
-    {
-        putText(img, "no", Point2d(10, 25), cv::FONT_HERSHEY_COMPLEX, 0.5, Scalar(0, 0, 255));
-    }
-    cv::imshow("img", img);
-    cv::waitKey(1);
-}
-
 
 void CvDetection::init()
 {
@@ -419,8 +289,6 @@ void CvDetection::segmentation_infer(cv::Mat img){
                 int righty = int(((lines[2]-width)*slope)+lines[3]);
                 cv::line(contoursImage, {width-1, righty}, {0, lefty}, (0, 255, 0), 2);
                 cout << lines << endl;
-                Vec4f x_line(0,0,1,0);
-                draw(contoursImage, lines, x_line);
 
                 // RotatedRect rRect = minAreaRect(contours[maxAreaContourId]);
                 // float fAngle = rRect.angle;//θ∈（-90度，0]
@@ -694,34 +562,7 @@ void CvDetection::ProcessState() {
             int index = 0;
             auto location = m_objetsin2Dimage[index];
             
-            //0.算出来的点
-            Eigen::Vector4d input(location.center_point[0], location.center_point[1], location.center_point[2],1);
-            //1.输出的点
-            Eigen::Vector4d output;
-            //2.转换矩阵
-            double qw = 0.7013088518485089;
-            double qx = 0.0039751934245023735;
-            double qy = -0.003477682492098677;
-            double qz = 0.7128379885223908;
-            double tx = 69.1845508606165;
-            double ty = -30.68690881661964;
-            double tz = -188.596799;
-            //旋转矩阵 初始化顺序，wxyz
-            Eigen::Quaterniond q(qw,qx,qy,qz);
-            q.normalize();
-            Eigen::Matrix3d R = q.toRotationMatrix();
-            //平移矩阵
-            Eigen::Vector3d T = Eigen::Vector3d(tx,ty,tz);
-            //相机坐标系到工具坐标系的变换矩阵
-            Eigen::Matrix4d Trans_ObjToTool;
-            Trans_ObjToTool.setIdentity();
-            Trans_ObjToTool.block<3,3>(0,0) = R;
-            Trans_ObjToTool.block<3,1>(0,3) = T;
-            //计算新点
-            output = Trans_ObjToTool.inverse()*input;
-
-
-            std::vector<float> move_postition{output(0),output(1),output(2)+50,xarm_state[3], xarm_state[4], xarm_state[5]};
+            std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2]+50,xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
             m_state_ = ST_SEGMENTATION_INFER;
         }
