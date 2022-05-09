@@ -145,11 +145,11 @@ void CvDetection::init()
 
 }
 
-void CvDetection::detection_infer(cv::Mat &img)
+void CvDetection::detection_infer(cv::Mat img)
 {
     m_objetsin2Dimage.clear(); //清空上一幅图像的目标
-    auto raw_iamge = img.clone();
-    det_objs = yolo_->commit(img).get();
+    auto detection_image = img.clone();
+    det_objs = yolo_->commit(detection_image).get();
     // cout << "det objets size : " << to_string(det_objs.size()) << std::endl;
     cv::Mat show_img;
     cv::namedWindow("detection_result");
@@ -159,7 +159,7 @@ void CvDetection::detection_infer(cv::Mat &img)
     {
         we_got_something = false;
         // cv::resize(img,show_img,cv::Size(800,640));
-        cv::imshow("detection_result",color_mat);
+        cv::imshow("detection_result",detection_image);
         cv::waitKey(1);
     }else{
         for (auto &obj : det_objs)
@@ -168,33 +168,33 @@ void CvDetection::detection_infer(cv::Mat &img)
             {
                 uint8_t b, g, r;
                 tie(b, g, r) = random_color(obj.class_label);
-                cv::rectangle(color_mat, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
+                cv::rectangle(detection_image, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
                 auto name = cocolabels[obj.class_label];
                 auto caption = cv::format("%s %.2f", name, obj.confidence);
                 int width = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
-                cv::rectangle(color_mat, cv::Point(obj.left - 3, obj.top - 33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
-                cv::putText(color_mat, caption, cv::Point(obj.left, obj.top - 5), 0, 1, cv::Scalar::all(0), 2, 16);
+                cv::rectangle(detection_image, cv::Point(obj.left - 3, obj.top - 33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
+                cv::putText(detection_image, caption, cv::Point(obj.left, obj.top - 5), 0, 1, cv::Scalar::all(0), 2, 16);
                 cv::Rect boundingbox(int(obj.left), int(obj.top), int(obj.right - obj.left), int(obj.bottom - obj.top));
                 auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
-                cv::circle(color_mat, center, 5, cv::Scalar(b, g, r), -1);
+                cv::circle(detection_image, center, 5, cv::Scalar(b, g, r), -1);
                 // 坐标系变换 粗检测的坐标系变换
-                auto temp = Objection(boundingbox, 0,0,0,name,is_in_camera_vison);
+                auto temp = Objection(boundingbox, 0,0,0,name);
                 m_objetsin2Dimage.push_back(temp);
             }
         }
             //获取物体的点云
-        for(auto& location : m_objetsin2Dimage){
-                auto switch_pointcloud = location.raw_cloud;
-                sensor_msgs::PointCloud2 switch_pointcloud_msg;
-                pcl::toROSMsg(*switch_pointcloud, switch_pointcloud_msg);
-                switch_pointcloud_msg.header.frame_id = "world";
-                switch_pointcloud_msg.header.stamp = ros::Time::now();
-                switch_pointcloud_pub.publish(switch_pointcloud_msg);
-        }
+        // for(auto& location : m_objetsin2Dimage){
+        //         auto switch_pointcloud = location.raw_cloud;
+        //         sensor_msgs::PointCloud2 switch_pointcloud_msg;
+        //         pcl::toROSMsg(*switch_pointcloud, switch_pointcloud_msg);
+        //         switch_pointcloud_msg.header.frame_id = "world";
+        //         switch_pointcloud_msg.header.stamp = ros::Time::now();
+        //         switch_pointcloud_pub.publish(switch_pointcloud_msg);
+        // }
 
 
         // cv::resize(color_mat,show_img,cv::Size(800,640));
-        cv::imshow("detection_result",color_mat);
+        cv::imshow("detection_result",detection_image);
         cv::waitKey(1);
         we_got_something = true;
     }
@@ -202,38 +202,73 @@ void CvDetection::detection_infer(cv::Mat &img)
 }
 
 
-void CvDetection::segmentation_infer(cv::Mat &img){
-        auto segmentation_img = cs->inference(img);
+void CvDetection::segmentation_infer(cv::Mat img){
+        auto segmentation_image = img.clone();
+        cv::imshow("segmentation_image",segmentation_image);
+        auto segmentation_img = cs->inference(segmentation_image);
+        cv::imshow("segmentation_result",segmentation_img);
         cv::Mat binary_image,gray_image;
         cvtColor(segmentation_img, gray_image, CV_BGR2GRAY);
         cv::adaptiveThreshold(gray_image, binary_image, 255, CV_ADAPTIVE_THRESH_MEAN_C,CV_THRESH_BINARY_INV, 25, 10); ///局部自适应二值化函数
-     
-            //去噪
+        //去噪
         Mat de_noise = binary_image.clone();
         //中值滤波
-        
         medianBlur(binary_image, de_noise, 5);
-        
         ///////////////////////// 膨胀 ////////////////////
         Mat dilate_img;
         Mat element = getStructuringElement(MORPH_RECT, Size(20, 20/*15, 15*/));
         dilate(de_noise, dilate_img,element);
-  
        //检测连通域，每一个连通域以一系列的点表示，FindContours方法只能得到第一个域
         vector<vector<Point>> contours;
         vector<Vec4i> hierarchy;
         findContours(binary_image, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);//CV_RETR_EXTERNAL只检测外部轮廓，可根据自身需求进行调整
         
         Mat contoursImage(dilate_img.rows, dilate_img.cols, CV_8U, Scalar(255));
-        int index = 0;
-        for (; index >= 0; index = hierarchy[index][0]) {
-            cv::Scalar color(rand() & 255, rand() & 255, rand() & 255);
-                
-            cv::drawContours(contoursImage, contours, index, Scalar(0), 1, 8, hierarchy);//描绘字符的外轮廓
-            
-            Rect rect = boundingRect(contours[index]);//检测外轮廓
-            rectangle(contoursImage, rect, Scalar(0,0,255), 3);//对外轮廓加矩形框
+        
+        //找最大连通区域
+        double maxArea = 0;
+        int maxAreaContourId = -1;
+        for (int j = 0; j < contours.size(); j++) {
+            double newArea = cv::contourArea(contours.at(j));
+            if (newArea > maxArea) {
+                maxArea = newArea;
+                maxAreaContourId = j;
+            } // End if
+        } // End for
+        if(maxAreaContourId>-1){
+                cv::Scalar color(rand() & 255, rand() & 255, rand() & 255);
+                cv::drawContours(contoursImage, contours, maxAreaContourId, Scalar(0), 1, 8, hierarchy);//描绘字符的外轮廓
+                Rect rect = boundingRect(contours[maxAreaContourId]);
+                rectangle(contoursImage,rect,Scalar(255,0,0), 2);
+                Vec4f lines;
+
+                double param = 0.0;
+                double reps = 0.01;
+                double aeps = 0.01;
+                fitLine(contours[maxAreaContourId], lines, DIST_L1, param, reps, aeps);
+                Point2d p0 = {lines[2],lines[3]};
+                float slope = -lines[1]/lines[0];
+                int width = img.size().width;
+                int height = img.size().height;
+                int lefty = int((lines[2]*slope) + lines[3]);
+                int righty = int(((lines[2]-width)*slope)+lines[3]);
+                cv::line(contoursImage, {width-1, righty}, {0, lefty}, (0, 255, 0), 2);
+                cout << lines << endl;
+
+                // RotatedRect rRect = minAreaRect(contours[maxAreaContourId]);
+                // float fAngle = rRect.angle;//θ∈（-90度，0]
+                // if (fAngle < -45){
+                //     fAngle = 90 + fAngle;
+                // }
+                // std::cout<<"旋转角度是 ： "<<fAngle<<std::endl;
+                // Point2f vertices[4];
+                // rRect.points(vertices);
+                // for (int i = 0; i < 4; i++)
+                //     line(contoursImage, vertices[i], vertices[(i+1)%4], Scalar(0,255,0), 2);
+                // Rect brect = rRect.boundingRect();
+                // rectangle(contoursImage, brect, Scalar(255,0,0), 2);
         }
+
         
         // cv::Rect boundingRect = rotatedRect.boundingRect();//返回包含旋转矩形的最小矩形
         // cv::Mat newSrc = srcCopy(boundingRect);
@@ -242,7 +277,8 @@ void CvDetection::segmentation_infer(cv::Mat &img){
         // newCenter.x = rotatedRect.center.x - boundingRect.x;
         // newCenter.y = rotatedRect.center.y - boundingRect.y;
 
-        cv::imshow("detection_result2",contoursImage);
+
+        cv::imshow("switch-pose",contoursImage);
         cv::waitKey(1);
 
 }
@@ -259,9 +295,10 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
         if (image_msg->header.seq % 3 == 0) //每隔3帧处理一次
         {
             color_mat = cv::imdecode(cv::Mat(image_msg->data), 1); // convert compressed image data to cv::Mat
+            dataman::GetInstance()->Setcolormat(color_mat);
             detection_infer(color_mat);
             segmentation_infer(color_mat);
-            dataman::GetInstance()->Setcolormat(color_mat);
+            
         }
     }
     catch (cv_bridge::Exception &e)
@@ -453,7 +490,6 @@ void CvDetection::ProcessState() {
                     m_state_ = ST_ROUTINE_DETECTION;
                 }else{
                     m_state_ = ST_FINE_DETECTION;
-                    is_in_camera_vison = true;
                 }
             }else{
                 detection_infer(color_mat);
@@ -490,6 +526,7 @@ void CvDetection::ProcessState() {
             //根据服务的消息，确定处理哪一个，所以不loop了
             int index = 0;
             auto location = m_objetsin2Dimage[index];
+            
             std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2]+50,xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
             m_state_ = ST_SEGMENTATION_INFER;

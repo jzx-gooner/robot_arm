@@ -18,10 +18,9 @@ private:
     Eigen::Vector3f V_T;//平移向量T
     Eigen::Matrix<float,3,3> Inner_Transformation_Depth,InnerTransformation_Color;// 相机内参
     cv::Mat Depthmat, color_mat;
-    bool in_camera_vision_ = false;
         
 public:
-    Position_Transform(std::array<int,2> Pix,bool flag,bool in_camera_vision_);//构造函数 传进rgb或者depth像素坐标
+    Position_Transform(std::array<int,2> Pix,bool flag);//构造函数 传进rgb或者depth像素坐标
     void Get_camera_referance();//获取相机内参数和转换矩阵
     Eigen::Vector3f Color_PixtoCamera(std::array<int,2> Pix); //彩色图像像素坐标到彩色图像坐标
     Eigen::Vector2f Color_cameraToDepth_Pixel(Eigen::Vector3f Pix_P);//彩色相机坐标到深度像素坐标

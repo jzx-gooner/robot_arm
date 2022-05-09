@@ -137,8 +137,8 @@ class CvDetection {
         void depthCallback(const sensor_msgs::ImageConstPtr& msg);
         void depth_to_colorCallback(const realsense2_camera::Extrinsics &extrin);
         void sendMsgs(sensor_msgs::ImagePtr msg);
-        void detection_infer(cv::Mat &img);
-        void segmentation_infer(cv::Mat &img);
+        void detection_infer(cv::Mat img);
+        void segmentation_infer(cv::Mat img);
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
         bool saveServerClient(cv_switch::serverSaveDetectionResult::Request &req, cv_switch::serverSaveDetectionResult::Response &res);
         void ArmMove(std::vector<float> prep_pos);
@@ -172,7 +172,6 @@ class CvDetection {
         bool rect_done_ =false;
         bool draw_box_ = true;
 
-        bool is_in_camera_vison = false;
 
         cv::Rect region_rect_;
         std::vector<double> xarm_state;

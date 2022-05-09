@@ -101,7 +101,7 @@ void CvSegmentation::render(cv::Mat& image, const cv::Mat& prob, const cv::Mat& 
         int iclass        = *pclass;
         float probability = *pprob;
         auto& pixel       = *pimage;
-        float foreground  = min(0.6f + probability * 0.2f, 0.8f);
+        float foreground  = 1;//min(0.6f + probability * 0.2f, 0.8f);
         float background  = 1 - foreground;
         for(int c = 0; c < 3; ++c){
             auto value = pixel[c] * background + foreground * _classes_colors[iclass * 3 + 2-c];

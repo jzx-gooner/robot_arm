@@ -37,7 +37,6 @@ class Objection {
         
         cv::Mat Depthmat, color_mat;
         int detction_mode_ = 0; 
-        bool is_in_camera_vison = false;
         
 
 
@@ -49,7 +48,7 @@ class Objection {
         string Classname;
         int ClassID;
         // Objection(cv::Rect Box,string name);
-        Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name,bool is_in_camera_vison);
+        Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name);
         void CheckStartPoint();
         void Transform_ImgtoCam();
         void DealRect();//处理对象区域范围

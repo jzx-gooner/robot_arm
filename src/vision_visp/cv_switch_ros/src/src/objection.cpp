@@ -72,7 +72,7 @@ using namespace std;
 // }
 
 
-Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name,bool is_in_camera_vison){
+Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name){
     //1.获取数据
     MTR = dataman::GetInstance()->GetMTR();
     V_T = dataman::GetInstance()->GetV_T();
@@ -89,7 +89,7 @@ Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float
     int center_y = (Aera_Objection_R.y+Aera_Objection_R.height/2);
     // cout<<"center_x:"<<center_x<<"center_y:"<<center_y<<endl;
     //4.计算三维坐标
-    Position_Transform PT(array<int,2>{center_x,center_y}, true,is_in_camera_vison);
+    Position_Transform PT(array<int,2>{center_x,center_y}, true);
     std::array<int, 3> center_location=PT.Get_XYZ();//转换
     ostringstream center_ss;
     center_ss << "("<<static_cast<int>(center_location[0])<<","<<static_cast<int>(center_location[1])<<","<<static_cast<int>(center_location[2]) <<")";
@@ -104,38 +104,38 @@ Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float
     //5.获得该框内的所有像素点
     std::cout << "图像平面中心点: " << grasp_world[0] << ", " << grasp_world[1] << ", " << grasp_world[2] <<  std::endl;
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    // pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    int w = Aera_Objection_R.width;
-    int h = Aera_Objection_R.height;
-    int x_start = Aera_Objection_R.x;
-    int y_start = Aera_Objection_R.y;
-    //稀疏化取点
-    cout<<"w "<<w <<"h "<<h<<"x_start "<<x_start<<"y_start "<<y_start<<endl;
-    int stride = 1;
-    for(int i= x_start; i<x_start+w-stride; i+=stride){
-        for(int j=y_start; j<y_start+h-stride; j+=stride){
-            pcl::PointXYZ CurrentPoint;
-            Position_Transform PT(array<int,2>{i,j},true, is_in_camera_vison);
-            std::array<int, 3> center_location=PT.Get_XYZ();//转换
+    // int w = Aera_Objection_R.width;
+    // int h = Aera_Objection_R.height;
+    // int x_start = Aera_Objection_R.x;
+    // int y_start = Aera_Objection_R.y;
+    // //稀疏化取点
+    // cout<<"w "<<w <<"h "<<h<<"x_start "<<x_start<<"y_start "<<y_start<<endl;
+    // int stride = 1;
+    // for(int i= x_start; i<x_start+w-stride; i+=stride){
+    //     for(int j=y_start; j<y_start+h-stride; j+=stride){
+    //         pcl::PointXYZ CurrentPoint;
+    //         Position_Transform PT(array<int,2>{i,j},true);
+    //         std::array<int, 3> center_location=PT.Get_XYZ();//转换
 
 
-            Eigen::Vector3f grasp_world = PT.Get_ROBOT_TOOL_XYZ();
-            CurrentPoint ={grasp_world[0],grasp_world[1],grasp_world[2]};
+    //         Eigen::Vector3f grasp_world = PT.Get_ROBOT_TOOL_XYZ();
+    //         CurrentPoint ={grasp_world[0],grasp_world[1],grasp_world[2]};
 
-            if(grasp_world[0]==0 or grasp_world[1]==0 or grasp_world[2]==0){
-                continue;
-            }
-            // std::cout<<"real point  x,y,z: "<<grasp_world[0]<<" , "<<grasp_world[1]<<" , "<<grasp_world[2]<<std::endl;
-            temp_cloud->points.push_back(CurrentPoint);
-        }
-    }
+    //         if(grasp_world[0]==0 or grasp_world[1]==0 or grasp_world[2]==0){
+    //             continue;
+    //         }
+    //         // std::cout<<"real point  x,y,z: "<<grasp_world[0]<<" , "<<grasp_world[1]<<" , "<<grasp_world[2]<<std::endl;
+    //         temp_cloud->points.push_back(CurrentPoint);
+    //     }
+    // }
 
-    std::cout<<"raw_cloud->points.size()"<<temp_cloud->points.size()<<std::endl;
+    // std::cout<<"raw_cloud->points.size()"<<temp_cloud->points.size()<<std::endl;
 
-    // variance(raw_cloud);
+    // // variance(raw_cloud);
 
-    raw_cloud = temp_cloud;
+    // raw_cloud = temp_cloud;
     
 
 

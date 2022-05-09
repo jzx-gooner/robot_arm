@@ -154,13 +154,7 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
         Eigen::Vector4d result;
         Eigen::Vector4d ObjPosition;
         ObjPosition<<PCL_Position.at(0),PCL_Position.at(1),PCL_Position.at(2),1;
-        if(in_camera_vision_){
-            result=Trans_ToolToBase*ObjPosition;
-        }else{
-            result= matrix_ObjToBase*ObjPosition;
-        }
-        
-        
+        result= matrix_ObjToBase*ObjPosition;
         Eigen::Vector3f temp2;
         temp2<<result(0),result(1),result(2);
         // cout<<"输出结果"<<result(0)<<","<<result(1)<<","<<result(2)<<endl;
@@ -172,8 +166,7 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
 
 
 //构造函数
-Position_Transform::Position_Transform(std::array<int,2> Pix,bool flag,bool in_camera_vision_) {
-    in_camera_vision_ = in_camera_vision_;
+Position_Transform::Position_Transform(std::array<int,2> Pix,bool flag) {
     Get_camera_referance();//得到相机参数
     if (flag)//flag==true means RGB_Pix
     {
