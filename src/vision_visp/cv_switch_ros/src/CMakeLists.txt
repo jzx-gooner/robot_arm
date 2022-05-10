@@ -3,7 +3,9 @@ project(cv_switch)
 add_definitions(-std=c++14)
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE  "Release")
+
+
 
 # 如果你是不同显卡，请设置为显卡对应的号码参考这里：https://developer.nvidia.com/zh-cn/cuda-gpus#compute
 #set(CUDA_GEN_CODE "-gencode=arch=compute_75,code=sm_75")
@@ -13,7 +15,21 @@ set(CUDNN_DIR    "/usr/local/cuda-11.4/include")
 set(TENSORRT_DIR "/usr/src/tensorrt")
 
 
+# arm or x86 为了模板匹配的加速
+IF(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+    SET(PLATFORM_COMPILE_FLAGS "-mfpu=neon")
+ELSE()
+    SET(PLATFORM_COMPILE_FLAGS "-march=native")
 
+    # some places of the algorithm are designed for 128 SIMD
+    # so 128 SSE may slightly faster than 256 AVX, you may want this
+#    SET(PLATFORM_COMPILE_FLAGS "-msse -msse2 -msse3 -msse4 -mssse3")  # SSE only
+ENDIF()
+
+SET(COMMON_COMPILE_FLAGS "-fopenmp -Wall -Wno-sign-compare")
+SET(CMAKE_CXX_FLAGS "${PLATFORM_COMPILE_FLAGS} ${COMMON_COMPILE_FLAGS} $ENV{CXXFLAGS}")
+SET(CMAKE_CXX_FLAGS_DEBUG "-O0 -g2 -ggdb")
+SET(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 #指定依赖包，生成对应的环境变量
 find_package(catkin REQUIRED
@@ -76,6 +92,7 @@ catkin_package(
 #指定c++的头文件路径
 include_directories(
         include
+        include/MIPP #mipp头
         ${CUDA_DIR}/include
         ${TENSORRT_DIR}/include
         ${CUDNN_DIR}/include
@@ -107,6 +124,7 @@ set(SRC
         src/objection.cpp
         src/Position_Transform.cpp
         src/dataman.cpp
+        src/line2Dup.cpp
         tensorRT/common/cuda_tools.cpp
         tensorRT/common/ilogger.cpp
         tensorRT/common/json.cpp

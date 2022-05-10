@@ -15,6 +15,10 @@
 // marker
 #include <visualization_msgs/MarkerArray.h>
 
+
+//a shape based match
+#include "shape_based_match.cpp"
+
 using namespace std;
 using namespace cv;
 
@@ -463,6 +467,7 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
             dataman::GetInstance()->Setcolormat(color_mat);
             detection_infer(color_mat);
             segmentation_infer(color_mat);
+            angle_test("test",false,color_mat);
             
         }
     }
