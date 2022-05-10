@@ -116,9 +116,6 @@ Vec4d lines_intersection(const Vec4d l1, const Vec4d l2)
         double b = sqrt(pow(x4 - x0, 2) + pow(y4 - y0, 2));
         double c = sqrt(pow(x2 - x0, 2) + pow(y2 - y0, 2));
         angle = acos((b * b + c * c - a * a) / (2 * b * c)) * 180 / CV_PI;
-        if(angle>90){
-            angle = angle-90; //永远求锐角
-        }
     }
     return Vec4d(r, x0, y0, angle);
 }
@@ -308,9 +305,6 @@ void CvDetection::init()
     //2.初始化机械臂
     xarm_c.init(nh_);
 	xarm_c.motionEnable(1);
-    xarm_c.gripperConfig(5000);
-    xarm_c.gripperMove(850);
-    xarm_c.gripperMove(200);
 	xarm_c.setMode(0);
 	xarm_c.setState(0);
 
@@ -632,9 +626,6 @@ void CvDetection::ArmMove(std::vector<float> prep_pos){
     xarm_c.moveLine(prep_pos, 30, 200);
 }
 
-void CvDetection::GriperMove(float angle){
-    std::cout<<"搞定旋转"<<std::endl;
-}
 
 void CvDetection::ProcessState() {
     switch (m_state_) {

@@ -142,7 +142,7 @@ class CvDetection {
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
         bool saveServerClient(cv_switch::serverSaveDetectionResult::Request &req, cv_switch::serverSaveDetectionResult::Response &res);
         void ArmMove(std::vector<float> prep_pos);
-        void GriperMove(float angle);
+        void CvDetection::GriperMove(float angle)
         bool rough_detection();
         bool fine_detection();
         static void mouseHandleStatic( int event, int x, int y, int flags, void* that );

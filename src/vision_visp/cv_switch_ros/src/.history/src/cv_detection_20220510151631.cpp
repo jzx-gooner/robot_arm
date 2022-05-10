@@ -308,9 +308,6 @@ void CvDetection::init()
     //2.初始化机械臂
     xarm_c.init(nh_);
 	xarm_c.motionEnable(1);
-    xarm_c.gripperConfig(5000);
-    xarm_c.gripperMove(850);
-    xarm_c.gripperMove(200);
 	xarm_c.setMode(0);
 	xarm_c.setState(0);
 
@@ -633,7 +630,7 @@ void CvDetection::ArmMove(std::vector<float> prep_pos){
 }
 
 void CvDetection::GriperMove(float angle){
-    std::cout<<"搞定旋转"<<std::endl;
+    xarm_c.moveLine(prep_pos, 30, 200);
 }
 
 void CvDetection::ProcessState() {

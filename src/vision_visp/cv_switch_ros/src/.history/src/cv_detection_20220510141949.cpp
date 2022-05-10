@@ -116,9 +116,6 @@ Vec4d lines_intersection(const Vec4d l1, const Vec4d l2)
         double b = sqrt(pow(x4 - x0, 2) + pow(y4 - y0, 2));
         double c = sqrt(pow(x2 - x0, 2) + pow(y2 - y0, 2));
         angle = acos((b * b + c * c - a * a) / (2 * b * c)) * 180 / CV_PI;
-        if(angle>90){
-            angle = angle-90; //永远求锐角
-        }
     }
     return Vec4d(r, x0, y0, angle);
 }
@@ -308,9 +305,6 @@ void CvDetection::init()
     //2.初始化机械臂
     xarm_c.init(nh_);
 	xarm_c.motionEnable(1);
-    xarm_c.gripperConfig(5000);
-    xarm_c.gripperMove(850);
-    xarm_c.gripperMove(200);
 	xarm_c.setMode(0);
 	xarm_c.setState(0);
 
@@ -409,8 +403,6 @@ void CvDetection::segmentation_infer(cv::Mat img){
         if(maxAreaContourId>-1){
                 cv::Scalar color(rand() & 255, rand() & 255, rand() & 255);
                 cv::drawContours(contoursImage, contours, maxAreaContourId, Scalar(0), 1, 8, hierarchy);//描绘字符的外轮廓
-                
-                cv::drawContours(segmentation_image, contours, maxAreaContourId, Scalar(125,125,125), 1, 8, hierarchy);//描绘字符的外轮廓
                 Rect rect = boundingRect(contours[maxAreaContourId]);
                 rectangle(contoursImage,rect,Scalar(255,0,0), 2);
                 Vec4f lines;
@@ -425,13 +417,23 @@ void CvDetection::segmentation_infer(cv::Mat img){
                 int height = img.size().height;
                 int lefty = int((lines[2]*slope) + lines[3]);
                 int righty = int(((lines[2]-width)*slope)+lines[3]);
-                cv::line(segmentation_image, {width-1, righty}, {0, lefty}, (255, 255, 0), 2);
+                cv::line(contoursImage, {width-1, righty}, {0, lefty}, (0, 255, 0), 2);
                 cout << lines << endl;
+                Vec4f x_line(0,0,1,0);
+                draw(contoursImage, lines, x_line);
 
-                //线转成两点式
-                Vec4f line1(width-1, righty,0, lefty);
-                Vec4f line2(0,height/2,width/2,height/2);
-                draw(segmentation_image, line1,line2);
+                // RotatedRect rRect = minAreaRect(contours[maxAreaContourId]);
+                // float fAngle = rRect.angle;//θ∈（-90度，0]
+                // if (fAngle < -45){
+                //     fAngle = 90 + fAngle;
+                // }
+                // std::cout<<"旋转角度是 ： "<<fAngle<<std::endl;
+                // Point2f vertices[4];
+                // rRect.points(vertices);
+                // for (int i = 0; i < 4; i++)
+                //     line(contoursImage, vertices[i], vertices[(i+1)%4], Scalar(0,255,0), 2);
+                // Rect brect = rRect.boundingRect();
+                // rectangle(contoursImage, brect, Scalar(255,0,0), 2);
         }
 
         
@@ -632,9 +634,6 @@ void CvDetection::ArmMove(std::vector<float> prep_pos){
     xarm_c.moveLine(prep_pos, 30, 200);
 }
 
-void CvDetection::GriperMove(float angle){
-    std::cout<<"搞定旋转"<<std::endl;
-}
 
 void CvDetection::ProcessState() {
     switch (m_state_) {
