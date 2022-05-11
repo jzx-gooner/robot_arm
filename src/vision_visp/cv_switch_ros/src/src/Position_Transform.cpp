@@ -164,6 +164,64 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
 
 
 
+//返回相对于工具坐标系的位置
+Eigen::Vector3f Position_Transform::Get_CAMERA_TOOL_XYZ() {
+
+    //0.相机坐标系到工具坐标系的变换矩阵
+        /* 手眼标定得到的转移关系 是眼坐标到手坐标的关系 todo:load config */
+        double qw = 0.7013088518485089;
+        double qx = 0.0039751934245023735;
+        double qy = -0.003477682492098677;
+        double qz = 0.7128379885223908;
+        double tx = 0;
+        double ty = 0;
+        double tz = -188.596799;
+        //旋转矩阵 初始化顺序，wxyz
+        Eigen::Quaterniond q(qw,qx,qy,qz);
+        q.normalize();
+        Eigen::Matrix3d R = q.toRotationMatrix();
+        //平移矩阵
+        Eigen::Vector3d T = Eigen::Vector3d(tx,ty,tz);
+        //相机坐标系到工具坐标系的变换矩阵
+        Eigen::Matrix4d Trans_ObjToTool;
+        Trans_ObjToTool.setIdentity();
+        Trans_ObjToTool.block<3,3>(0,0) = R;
+        Trans_ObjToTool.block<3,1>(0,3) = T;
+    //1.工具坐标系到基坐标的的变换矩阵
+
+        //获取当前机器人姿
+        std::vector<double> current_xarm_state =   dataman::GetInstance()->GetXarmState();
+
+        // std::cout<<"机器人当前位姿"<<current_xarm_state[0]<<","<<current_xarm_state[1]<<","<<current_xarm_state[2]<<std::endl;
+
+        Eigen::Vector3d ea(current_xarm_state[5], current_xarm_state[4], current_xarm_state[3]);  //0 1 2 对应 z y x
+        Eigen::Matrix3d R_2;
+        R_2 = Eigen::AngleAxisd(ea[0], Eigen::Vector3d::UnitZ()) *
+                        Eigen::AngleAxisd(ea[1], Eigen::Vector3d::UnitY()) *
+                        Eigen::AngleAxisd(ea[2], Eigen::Vector3d::UnitX());
+        // cout<<"R_2:"<<R_2<<endl;
+        Eigen::Vector3d T_2 = Eigen::Vector3d(current_xarm_state[0], current_xarm_state[1], current_xarm_state[2]);//当前的pose
+        Eigen::Matrix4d Trans_ToolToBase; // Your Transformation Matrix
+        Trans_ToolToBase.setIdentity();   // Set to Identity to make bottom row of Matrix 0,0,0,1
+        Trans_ToolToBase.block<3,3>(0,0) = R_2;
+        Trans_ToolToBase.block<3,1>(0,3) = T_2;
+    //2.相机坐标系到基坐标系
+        Eigen::Matrix<double,4,4> matrix_ObjToBase;
+        matrix_ObjToBase=Trans_ToolToBase*Trans_ObjToTool;
+        // cout<<"cam_to_base"<<endl<<matrix_ObjToBase<<endl;
+    //3.得到基坐标系下的坐标
+        Eigen::Vector4d result;
+        Eigen::Vector4d ObjPosition;
+        ObjPosition<<PCL_Position.at(0),PCL_Position.at(1),PCL_Position.at(2),1;
+        result= matrix_ObjToBase*ObjPosition;
+        Eigen::Vector3f temp2;
+        temp2<<result(0),result(1),result(2);
+        // cout<<"输出结果"<<result(0)<<","<<result(1)<<","<<result(2)<<endl;
+
+        return temp2;
+}
+
+
 
 //构造函数
 Position_Transform::Position_Transform(std::array<int,2> Pix,bool flag) {

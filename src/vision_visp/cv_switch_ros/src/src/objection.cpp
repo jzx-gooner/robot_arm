@@ -10,68 +10,6 @@
 using namespace std;
 
 
-// float variance(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
-// {   
-// 	float res = 0.0;//定义平均距离
-// 	float var = 0.0;//定义方差
-// 	float standard_deviation = 0.0;
-// 	int n_points = 0;//定义记录点云数量
-// 	int nres;//定义邻域查找数量
-// 			 //vector是顺序容器的一种。vector 是可变长的动态数组
-// 	std::vector<int> indices(2);//创建一个包含2个int类型数据的vector //创建一个动态数组，存储查询点近邻索引 //等价于这两行代码 using std::vector; vector<int> indices(2);
-// 	std::vector<float> sqr_distances(2);//存储近邻点对应平方距离
-// 	pcl::KdTreeFLANN<pcl::PointXYZ> tree;//以k-d tree方式查找
-// 	tree.setInputCloud(cloud);
- 
-// 	for (size_t i = 0; i < cloud->size(); ++i)//循环遍历每一个点
-// 	{
-// 		// if (!pcl_isfinite(cloud->points[i].x))//pcl_isfinite函数返回一个布尔值，检查某个值是不是正常数值
-// 		// {
-// 		// 	continue;
-// 		// }
-// 		//Considering the second neighbor since the first is the point itself.
-// 		// kdtree.nearestKSearch (searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) 
-// 		//这是执行 K 近邻查找的成员函数（其中，当k为1的时候，就是最近邻搜索。当k大于1的时候，就是多个最近邻搜索，此处k为2）
-// 		//K为要搜索的邻居数量（k the number of neighbors to search for）
-// 		nres = tree.nearestKSearch(i, 2, indices, sqr_distances);//函数返回值（返回找到的邻域数量），return number of neighbors found
-// 		if (nres == 2)//如果为两个点之间
-// 		{
-// 			res += sqrt(sqr_distances[1]);//sqrt()函数，返回sqr_distances[1]的开平方数
-// 			//std::cout << "sqr_distances[1]：" << sqr_distances[1] << std::endl;//打印与临近点距离的平方值
-// 			++n_points;
-// 		}
-// 	}
-// 	std::cout << "nres：" << nres << std::endl;
-// 	std::cout << "点云总数量n_points：" << n_points << std::endl;
-// 	if (n_points != 0)
-// 	{
-// 		res /= n_points;
-// 		for (size_t i = 0; i < cloud->size(); ++i)
-// 		{
-// 			// if (!pcl_isfinite(cloud->points[i].x))
-// 			// {
-// 			// 	continue;
-// 			// }
-// 			nres = tree.nearestKSearch(i, 2, indices, sqr_distances);
-// 			if (nres == 2)
-// 			{
-// 				var += pow(sqrt(sqr_distances[1]) - res, 2);
-// 				++n_points;
-// 			}
-// 		}	
-// 		if (n_points != 0)
-// 		{
-// 			var /= n_points;
-// 			standard_deviation = sqrt(var);
-// 		}
-// 	}
-// 	std::cout << "平均距离：" << res << std::endl;
-// 	std::cout << "方差：" << var << std::endl;
-// 	std::cout << "标准差：" << standard_deviation << std::endl;
-// 	return res;
-// }
-
-
 Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name){
     //1.获取数据
     MTR = dataman::GetInstance()->GetMTR();
@@ -89,10 +27,18 @@ Objection::Objection(cv::Rect Box, float roll,float segmentation_center_x ,float
     int center_y = (Aera_Objection_R.y+Aera_Objection_R.height/2);
     // cout<<"center_x:"<<center_x<<"center_y:"<<center_y<<endl;
     //4.计算三维坐标
+    //接下来这个类，有点没写好，也有点懒得改了
+    //先把图像坐标转换为相机坐标
     Position_Transform PT(array<int,2>{center_x,center_y}, true);
     std::array<int, 3> center_location=PT.Get_XYZ();//转换
     ostringstream center_ss;
     center_ss << "("<<static_cast<int>(center_location[0])<<","<<static_cast<int>(center_location[1])<<","<<static_cast<int>(center_location[2]) <<")";
+    //先求一个能把物体放到视野中心的位置
+    Eigen::Vector3f camera_in_center_world = PT.Get_CAMERA_TOOL_XYZ();
+    camera_in_center_point.push_back(camera_in_center_world[0]);
+    camera_in_center_point.push_back(camera_in_center_world[1]);
+    camera_in_center_point.push_back(camera_in_center_world[2]);
+    //再把相机坐标转换到机械臂坐标
     Eigen::Vector3f grasp_world = PT.Get_ROBOT_TOOL_XYZ();
     ostringstream grasp_ss;
     grasp_ss<<""<<static_cast<int>(grasp_world[0])<<","<<static_cast<int>(grasp_world[1])<<","<<static_cast<int>(grasp_world[2])<<"";
@@ -149,56 +95,4 @@ cv::Rect  Objection::Area_limit(cv::Rect Box) {
     Obj.height=(Obj.height+Obj.y>(HeightCam-1) ? (HeightCam-1)-Obj.y:Obj.height);//目标框大小越界检测
     Obj.width=(Obj.width+Obj.x>(WidthCam-1) ? (WidthCam-1)-Obj.x:Obj.width);
     return Obj;
-}
-void Objection::CheckStartPoint() {
-    array<float,2> Pre_point;
-   Pre_point.at(0)=Aera_Objection_R.x+Aera_Objection_R.width/2 ;
-   Pre_point.at(1)=Aera_Objection_R.y+Aera_Objection_R.height/2;
-//   cout<<Classname<<": Point_img:"<<Point_img.at(0)<<"  "<<Point_img.at(1)<<endl;
-//   if (Enable== false) {
-   Point_img.at(0)=Pre_point.at(0);
-   Point_img.at(1)=Pre_point.at(1);
-//   }
-}
-void Objection::Transform_ImgtoCam() {
-//    Position_Transform Objection_center(Point_img,true);
-//    Point_Camera=Objection_center.Report_PCL();
-//    if(Point_Camera.at(2)<=200||Point_Camera.at(2)>=6000)
-    if (Real_Point.size()>0)
-       Enable= true;
-    else Enable= false;
-}
-float Objection::Get_Area_Depth(cv::Rect Box) {
-    std::array<int,Stride*Stride> Arr_Box;
-    int result;
-    for (int i = Box.y; i < Box.y+Box.height; ++i)
-        for (int j = Box.x; j < Box.x+Box.width; ++j)
-        {
-            if (Depthmat.at<uint16_t>(i, j) > 6000 || Depthmat.at<uint16_t>(i, j) < 200)//D435有效探测距离有限 0.2M-6M
-                Arr_Box.at((i - Box.y)*Stride + (j - Box.x))= 0;
-            else
-                Arr_Box.at((i - Box.y)*Stride + (j - Box.x)) = Depthmat.at<uint16_t>(i, j);
-        }
-    sort(Arr_Box.begin(),Arr_Box.end());
-    for (auto i:Arr_Box){    //最小池化
-        if (i>200){
-            result=i;
-            break;
-        }
-    }
-    ///////////////////////////////平均池化
-//    std::array<int,Stride*2> Value;
-//    int sub=0;
-//    for (int i = 0; i < Stride*2; ++i) {
-//        Value.at(i)=Arr_Box.at(Stride*Stride/2-Stride+1+i);
-//        if (Value.at(i)==0)
-//            sub++;//剔除无效的点
-//    }
-//    result=std::accumulate(Value.begin(),Value.end(),0.0);
-//    if (result<200)
-//        result=0;
-//    else
-//        result=result/(Value.size()-sub);
-    /////////////////////////////////////
-    return result  ;
 }

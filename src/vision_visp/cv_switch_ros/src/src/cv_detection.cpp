@@ -467,7 +467,7 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
             dataman::GetInstance()->Setcolormat(color_mat);
             detection_infer(color_mat);
             segmentation_infer(color_mat);
-            angle_test("test",false,color_mat);
+            // angle_test("test",false,color_mat);
             
         }
     }
@@ -699,35 +699,7 @@ void CvDetection::ProcessState() {
             //根据服务的消息，确定处理哪一个，所以不loop了
             int index = 0;
             auto location = m_objetsin2Dimage[index];
-            
-            // //0.算出来的点
-            // Eigen::Vector4d input(location.center_point[0], location.center_point[1], location.center_point[2],1);
-            // //1.输出的点
-            // Eigen::Vector4d output;
-            // //2.转换矩阵
-            // double qw = 0.7013088518485089;
-            // double qx = 0.0039751934245023735;
-            // double qy = -0.003477682492098677;
-            // double qz = 0.7128379885223908;
-            // double tx = 69.1845508606165;
-            // double ty = -30.68690881661964;
-            // double tz = -188.596799;
-            // //旋转矩阵 初始化顺序，wxyz
-            // Eigen::Quaterniond q(qw,qx,qy,qz);
-            // q.normalize();
-            // Eigen::Matrix3d R = q.toRotationMatrix();
-            // //平移矩阵
-            // Eigen::Vector3d T = Eigen::Vector3d(tx,ty,tz);
-            // //相机坐标系到工具坐标系的变换矩阵
-            // Eigen::Matrix4d Trans_ObjToTool;
-            // Trans_ObjToTool.setIdentity();
-            // Trans_ObjToTool.block<3,3>(0,0) = R;
-            // Trans_ObjToTool.block<3,1>(0,3) = T;
-            // //计算新点
-            // output = input*Trans_ObjToTool.inverse();
-
-
-            std::vector<float> move_postition{location.center_point[0], location.center_point[1], location.center_point[2]+100,xarm_state[3], xarm_state[4], xarm_state[5]};
+            std::vector<float> move_postition{location.camera_in_center_point[0], location.camera_in_center_point[1], location.camera_in_center_point[2],xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
             m_state_ = ST_SEGMENTATION_INFER;
         }

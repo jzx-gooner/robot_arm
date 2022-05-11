@@ -27,6 +27,7 @@ public:
     std::array<int,3> Get_XYZ();//返回对应点的相机极坐标系3D位置
     std::array<int,2> Get_Depth_Pixel(std::array<int,2> Pix);
     Eigen::Vector3f Get_ROBOT_TOOL_XYZ();//返回相对于机械臂底座的3D位置
+    Eigen::Vector3f Get_CAMERA_TOOL_XYZ(); //返回相对于机械臂底座的3D位置,这个位置能保证物体在相机视野中心
     ~Position_Transform();
 };
 #endif //DNN_YOLO_POSITION_TRANSFORM_H
