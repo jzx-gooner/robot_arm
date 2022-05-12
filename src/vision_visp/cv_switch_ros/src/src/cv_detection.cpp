@@ -124,6 +124,12 @@ Vec4d lines_intersection(const Vec4d l1, const Vec4d l2)
             angle = angle-90; //永远求锐角
         }
     }
+
+    //根据斜率求正负
+    double k = (y2 - y1) / (x2 - x1);
+    if(k<0){
+        angle = -angle;
+    }
     return Vec4d(r, x0, y0, angle);
 }
 
@@ -247,7 +253,7 @@ void draw(Mat img, const Vec4d l1, const Vec4d l2)
     if (v[0])
     {
         string s = "(" + to_string(v[1]) + ", " + to_string(v[2]) + ") " + to_string(v[3]);
-        putText(img, s, Point2d(10, 25), cv::FONT_HERSHEY_COMPLEX, 0.5, Scalar(0, 255, 0));
+        putText(img, s, Point2d(10, 25), cv::FONT_HERSHEY_COMPLEX, 1.5, Scalar(0, 255, 0));
         circle(img, Point2d(v[1], v[2]), 2, Scalar(0, 0, 255), 2); // 画交点
     }
     else
@@ -313,8 +319,8 @@ void CvDetection::init()
     xarm_c.init(nh_);
 	xarm_c.motionEnable(1);
     xarm_c.gripperConfig(5000);
-    xarm_c.gripperMove(850);
-    xarm_c.gripperMove(200);
+    // xarm_c.gripperMove(850);
+    // xarm_c.gripperMove(200);
 	xarm_c.setMode(0);
 	xarm_c.setState(0);
 
@@ -432,9 +438,9 @@ void CvDetection::segmentation_infer(cv::Mat img){
                 cv::line(segmentation_image, {width-1, righty}, {0, lefty}, (255, 255, 0), 2);
                 cout << lines << endl;
 
-                //线转成两点式
+                //线转成两点式,注意图像坐标系
                 Vec4f line1(width-1, righty,0, lefty);
-                Vec4f line2(0,height/2,width/2,height/2);
+                Vec4f line2(width/2,height,width/2,0);
                 draw(segmentation_image, line1,line2);
         }
 
@@ -468,6 +474,7 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
             detection_infer(color_mat);
             segmentation_infer(color_mat);
             // angle_test("test",false,color_mat);
+            GriperMove(10); //debug 暂时打印一下角度
             
         }
     }
@@ -639,6 +646,18 @@ void CvDetection::ArmMove(std::vector<float> prep_pos){
 
 void CvDetection::GriperMove(float angle){
     std::cout<<"搞定旋转"<<std::endl;
+    //先开夹爪
+    // xarm_c.gripperMove(200);
+    //旋转角度 //const std::vector<float>& jnt_v, bool is_sync, float duration
+    //先获取当前位置的角度
+    std::vector<float> current_angles;
+    xarm_c.getServoAngle(current_angles);
+    //顺时针旋转是正，逆时针旋转是负，角度是弧度
+    //限制条件1，度数只允许[-90，90]
+    //限制条件2，机械臂关节第六自由度的初始是弧度0
+    std::cout<<"current angles: "<<current_angles[0]<<","<<current_angles[1]<<","<<current_angles[2]<<","<<current_angles[3]<<","<<current_angles[4]<<","<<current_angles[5]<<std::endl;
+    // xarm_c.moveJoint({0,0,0,0,0,angle}, 30, 200);
+
 }
 
 void CvDetection::ProcessState() {
