@@ -41,6 +41,7 @@ class Objection {
         std::vector<int> segmentation_center_point;//分割物体中心+位姿
         std::vector<int> camera_in_center_point;//这个是让物体在相机视野中心的位姿
         pcl::PointCloud<pcl::PointXYZ>::Ptr raw_cloud;
+        cv::Rect boundingbox;
 
 };
 #endif // OBJECTION_H

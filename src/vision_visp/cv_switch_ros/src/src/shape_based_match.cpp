@@ -125,7 +125,7 @@ private:
 
 
 void angle_test(string mode, bool viewICP,cv::Mat& raw_img){
-    line2Dup::Detector detector(100, {4}, 30, 50); //第一个是检测点个数字，第三个是匹配时候的，第四个是提取时候的
+    line2Dup::Detector detector(100, {4}, 20, 50); //第一个是检测点个数字，第三个是匹配时候的，第四个是提取时候的
     //https://github.com/meiqua/shape_based_matching/issues/24
 //    mode = "test";
     if(mode == "train"){
@@ -175,7 +175,9 @@ void angle_test(string mode, bool viewICP,cv::Mat& raw_img){
         auto infos = shape_based_matching::shapeInfo_producer::load_infos(prefix + "case7/test_info.yaml");
         
         Mat test_img = raw_img.clone();
-        cv::resize(test_img, test_img,cv::Size(600, 400));
+        int h = test_img.rows;
+        int w = test_img.cols;
+        cv::resize(test_img, test_img,cv::Size(2*w, 2*w));
         // cv::imshow("test", test_img);
         // double sigma1 = 10.0;
         // double sigma2 = 20.0;
@@ -334,7 +336,7 @@ void angle_test(string mode, bool viewICP,cv::Mat& raw_img){
         }
         // cv::imwrite(prefix+"case7/test.png", img);
         cv::imshow("shape based match",img);
-        cv::waitKey(1);
+        cv::waitKey(1000);
 
         // std::cout << "test end" << std::endl << std::endl;
     }

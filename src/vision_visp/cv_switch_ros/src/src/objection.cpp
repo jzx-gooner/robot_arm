@@ -11,6 +11,8 @@ using namespace std;
 
 
 Objection::Objection(cv::Rect Box, string name){
+    //0.存储数据
+    boundingbox = Box;
     //1.获取数据
     MTR = dataman::GetInstance()->GetMTR();
     V_T = dataman::GetInstance()->GetV_T();

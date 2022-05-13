@@ -141,10 +141,11 @@ class CvDetection {
         void segmentation_infer(cv::Mat img);
         void xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& states);
         bool saveServerClient(cv_switch::serverSaveDetectionResult::Request &req, cv_switch::serverSaveDetectionResult::Response &res);
-        void ArmMove(std::vector<float> prep_pos);
+        int ArmMove(std::vector<float> prep_pos);
         void GriperMove(float angle);
         bool rough_detection();
         bool fine_detection();
+        void template_match_infer(cv::Mat img);
         static void mouseHandleStatic( int event, int x, int y, int flags, void* that );
         void onMouse( int event, int x, int y, int flags);
         CvDetection(): nh_("xarm"){ };
@@ -173,13 +174,18 @@ class CvDetection {
         bool rect_done_ =false;
         bool draw_box_ = true;
 
+        //todo ：这个默认值设置成原点
+        float set_arm_x_ = -1;
+        float set_arm_y_ = -1;
+        float set_arm_z_ = -1;
+
         float fine_x =-1;
         float fine_y = -1;
         float fine_z = -1;
         float fine_angle = -1;
 
         int wait_count_ = 0;
-        bool from_fine_detection_ = false;
+        bool IS_AFTER_ST_MOVE_TO_FINE_DETECTION_ = false;
 
         cv::Rect region_rect_;
         std::vector<double> xarm_state;
@@ -195,11 +201,13 @@ class CvDetection {
             ST_INIT = 0,
             ST_ROUGH_DETECTION =1,//粗目标检测
             ST_ROUGH_ACTION = 2,//检测到就执行的动作
-            ST_FINE_DETECTION = 3,
-            ST_FINE_ACTION_CIRCLE = 4,
-            ST_FINE_ACTION_MOVE = 5,
-            ST_WAIT=6,
-            ST_COMPLETE = 7
+            ST_MOVE_TO_FINE_DETECTION = 3,
+            ST_FINE_DETECTION = 4,
+            ST_FINE_ACTION_CIRCLE = 5,
+            ST_FINE_ACTION_MOVE = 6,
+            ST_WAIT=7,
+            ST_CHECK_ARM_ARRIVE = 8,
+            ST_COMPLETE = 9
     } ROBOT_ARM_STATE;
     void ProcessState();
     ROBOT_ARM_STATE m_state_ = ST_COMPLETE;

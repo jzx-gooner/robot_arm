@@ -124,7 +124,7 @@ Vec4d lines_intersection(const Vec4d l1, const Vec4d l2)
 
     //根据斜率求正负
     double k = (y2 - y1) / (x2 - x1);
-    std::cout<<"k : "<<k <<" ,angle : "<<std::endl;
+    // std::cout<<"k : "<<k <<" ,angle : "<<std::endl;
     if(angle>90){
         angle = 180-abs(angle);//反正就是求锐角
     }
@@ -261,7 +261,7 @@ float  draw_and_get_angle(Mat img, const Vec4d l1, const Vec4d l2)
     {
         putText(img, "no", Point2d(10, 25), cv::FONT_HERSHEY_COMPLEX, 0.5, Scalar(0, 0, 255));
     }
-    std::cout<<"angle : " <<v[3]<<" , : "<<v[3]*DEG2RAD<<std::endl;
+    // std::cout<<"angle : " <<v[3]<<" , : "<<v[3]*DEG2RAD<<std::endl;
     return v[3]*DEG2RAD;
  
 }
@@ -363,6 +363,11 @@ void CvDetection::detection_infer(cv::Mat img)
                 // 坐标系变换 粗检测的坐标系变换
                 auto temp = Objection(boundingbox,name);
                 m_objetsin2Dimage.push_back(temp);
+
+                //模板匹配
+                // cv::Mat crop_image = color_mat(boundingbox);
+                // template_match_infer(crop_image);
+                
             }
         }
             //获取物体的点云
@@ -403,9 +408,7 @@ void CvDetection::segmentation_infer(cv::Mat img){
         vector<vector<Point>> contours;
         vector<Vec4i> hierarchy;
         findContours(binary_image, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);//CV_RETR_EXTERNAL只检测外部轮廓，可根据自身需求进行调整
-        
         Mat contoursImage(dilate_img.rows, dilate_img.cols, CV_8U, Scalar(255));
-        
         //找最大连通区域
         double maxArea = 0;
         int maxAreaContourId = -1;
@@ -468,6 +471,12 @@ void CvDetection::segmentation_infer(cv::Mat img){
         cv::waitKey(1); 
 
 }
+void CvDetection::template_match_infer(cv::Mat img){
+    angle_test("test",false,img);
+}
+
+
+
 
 bool CvDetection::fine_detection(){
 
@@ -484,7 +493,7 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
             dataman::GetInstance()->Setcolormat(color_mat);
             detection_infer(color_mat);
             segmentation_infer(color_mat);
-            // angle_test("test",false,color_mat);
+            
             
         }
     }
@@ -649,13 +658,15 @@ void CvDetection::xarm_states_callback(const xarm_msgs::RobotMsg::ConstPtr& stat
 }
 
 //机械臂移动到指定位置
-void CvDetection::ArmMove(std::vector<float> prep_pos){
+int CvDetection::ArmMove(std::vector<float> prep_pos){
     std::cout<<"move arm : "<< prep_pos[0]<<","<<prep_pos[1]<<","<<prep_pos[2]<<std::endl;
-    xarm_c.moveLine(prep_pos, 30, 200);
+    int result =  xarm_c.moveLine(prep_pos, 30, 200);
+    std::cout<<"result : "<<result<<std::endl;
+    return result;
 }
 
 void CvDetection::GriperMove(float angle){
-    std::cout<<"搞定旋转"<<std::endl;
+    // std::cout<<"搞定旋转"<<std::endl;
     //先开夹爪
     xarm_c.gripperMove(160);
     //旋转角度 //const std::vector<float>& jnt_v, bool is_sync, float duration
@@ -665,11 +676,11 @@ void CvDetection::GriperMove(float angle){
     //顺时针旋转是正，逆时针旋转是负，角度是弧度
     //限制条件1，度数只允许[-90，90]
     //限制条件2，机械臂关节第六自由度的初始是弧度0
-    std::cout<<"angle : "<<angle<<std::endl;
-    std::cout<<"current angles: "<<current_angles[0]<<","<<current_angles[1]<<","<<current_angles[2]<<","<<current_angles[3]<<","<<current_angles[4]<<","<<current_angles[5]<<std::endl;
+    // std::cout<<"angle : "<<angle<<std::endl;
+    // std::cout<<"current angles: "<<current_angles[0]<<","<<current_angles[1]<<","<<current_angles[2]<<","<<current_angles[3]<<","<<current_angles[4]<<","<<current_angles[5]<<std::endl;
     std::vector<float> new_angle{current_angles[0],current_angles[1],current_angles[2],current_angles[3],current_angles[4],angle};
     xarm_c.moveJoint(new_angle, 30, 200);
-    std::cout<<"new angles : "<<new_angle[0]<<","<<new_angle[1]<<","<<new_angle[2]<<","<<new_angle[3]<<","<<new_angle[4]<<","<<new_angle[5]<<std::endl;
+    // std::cout<<"new angles : "<<new_angle[0]<<","<<new_angle[1]<<","<<new_angle[2]<<","<<new_angle[3]<<","<<new_angle[4]<<","<<new_angle[5]<<std::endl;
 }
 
 void CvDetection::ProcessState() {
@@ -693,7 +704,7 @@ void CvDetection::ProcessState() {
                     std::cout<<"m_state : ST_ROUGH_DETECTION -> ST_ROUGH_ACTION"<<std::endl;
                     m_state_ = ST_ROUGH_ACTION;
                 }else{
-                    m_state_ = ST_FINE_DETECTION;
+                    m_state_ = ST_MOVE_TO_FINE_DETECTION;
                 }
             }
         }
@@ -718,33 +729,63 @@ void CvDetection::ProcessState() {
             }
             break;
 
-        case ST_FINE_DETECTION: {
+        case ST_MOVE_TO_FINE_DETECTION: {
             //输入是目标的位置一组 （x,y,z） 。需要loop执行
-            std::cout<<"m_state : ST_FINE_DETECTION "<<std::endl;
+            std::cout<<"m_state : ST_MOVE_TO_FINE_DETECTION "<<std::endl;
             //根据服务的消息，确定处理哪一个，所以不loop了
             int index = 0;
             auto location = m_objetsin2Dimage[index];
-            std::vector<float> move_postition{location.camera_in_center_point[0], location.camera_in_center_point[1], location.camera_in_center_point[2],xarm_state[3], xarm_state[4], xarm_state[5]};
-            ArmMove(move_postition);
-            from_fine_detection_ = true;
-            m_state_ = ST_WAIT;
+            set_arm_x_ = location.camera_in_center_point[0];
+            set_arm_y_ = location.camera_in_center_point[1];
+            set_arm_z_ = location.camera_in_center_point[2];
+            std::vector<float> move_postition{set_arm_x_,set_arm_y_ , set_arm_z_,xarm_state[3], xarm_state[4], xarm_state[5]};
+            int result = ArmMove(move_postition);
+            IS_AFTER_ST_MOVE_TO_FINE_DETECTION_ = true;
+            m_state_ = ST_CHECK_ARM_ARRIVE;
+
         }
             break;
 
         
+        case ST_CHECK_ARM_ARRIVE: {
+            //输入是目标的位置一组 （x,y,z） 。需要loop执行
+            std::cout<< set_arm_x_ <<"-"<<xarm_state[0]<<","<<set_arm_y_<<"-"<<xarm_state[1]<<","<<set_arm_z_ <<" - "<<xarm_state[2]<<std::endl;
+            if((set_arm_x_ - xarm_state[0])<1 && (set_arm_y_ - xarm_state[1])<1 && (set_arm_z_ - xarm_state[2])<1){
+               m_state_ = ST_WAIT; 
+               break;
+            }
+        }
+            break;
+
+
         case ST_WAIT: {
             std::cout<<"m_state : ST_WAIT "<<std::endl;
             wait_count_++;
-            if(wait_count_>10){
+            if(wait_count_>30){
                 wait_count_ = 0;
-                if(from_fine_detection_){
-                    m_state_ = ST_FINE_ACTION_CIRCLE;
-                    from_fine_detection_ = false;
+                if(IS_AFTER_ST_MOVE_TO_FINE_DETECTION_){
+                    m_state_ = ST_FINE_DETECTION;
+                    IS_AFTER_ST_MOVE_TO_FINE_DETECTION_ = false;
+                    break;
                 }else{
                     m_state_ = ST_FINE_ACTION_MOVE;
+                    break;
                 }
                 
             }
+        }
+            break;
+
+        case ST_FINE_DETECTION: {
+            std::cout<<"m_state : ST_FINE_DETECTION "<<std::endl;
+            //如果是segmentation
+            //如果是模板匹配
+            int index = 0;
+            auto location = m_objetsin2Dimage[index];
+            cv::Mat crop_image = color_mat(location.boundingbox);
+            template_match_infer(crop_image);
+            m_state_ = ST_FINE_ACTION_CIRCLE;
+            
         }
             break;
 
@@ -758,11 +799,11 @@ void CvDetection::ProcessState() {
         
         case ST_FINE_ACTION_MOVE: {
             std::cout<<"m_state : ST_FINE_ACTION_MOVE "<<std::endl;
+            //依旧是默认第一个位置，这个index是需要服务传进来的
             std::vector<float> move_postition{fine_x, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
             m_state_ = ST_COMPLETE;
             ArmMove(m_initpostion);
-            
         }
             break;
 
