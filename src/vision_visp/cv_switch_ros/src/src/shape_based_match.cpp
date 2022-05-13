@@ -293,9 +293,11 @@ void angle_test(string mode, bool viewICP,cv::Mat& raw_img){
             randColor[1] = 0;
             randColor[2] = 255;
             for(int i=0; i<templ[0].features.size(); i++){
-                auto feat = templ[0].features[i];
+                auto feat = templ[0].features[i];     
                 cv::circle(img, {feat.x+match.x, feat.y+match.y}, 2, randColor, -1);
             }
+            double init_angle = infos[match.template_id].angle;
+            cv::putText(img, to_string(init_angle), {18, 18}, cv::FONT_HERSHEY_SIMPLEX, 0.5, randColor, 1);
 
             // if(viewICP){
             //     imshow("icp", img);
