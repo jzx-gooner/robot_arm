@@ -34,9 +34,11 @@ class Objection {
 
     public:
         
-        Objection(cv::Rect Box, float roll,float segmentation_center_x ,float segmentation_center_y,string name);
+        Objection(cv::Rect Box, string name);
+        Objection(float segmentation_x,float segmentation_y,string name);
         cv::Rect Area_limit(cv::Rect Box);
-        std::vector<int> center_point;//物体中心+位姿
+        std::vector<int> detection_center_point;//检测物体中心+位姿
+        std::vector<int> segmentation_center_point;//分割物体中心+位姿
         std::vector<int> camera_in_center_point;//这个是让物体在相机视野中心的位姿
         pcl::PointCloud<pcl::PointXYZ>::Ptr raw_cloud;
 

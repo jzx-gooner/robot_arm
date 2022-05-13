@@ -173,6 +173,13 @@ class CvDetection {
         bool rect_done_ =false;
         bool draw_box_ = true;
 
+        float fine_x =-1;
+        float fine_y = -1;
+        float fine_z = -1;
+        float fine_angle = -1;
+
+        int wait_count_ = 0;
+        bool from_fine_detection_ = false;
 
         cv::Rect region_rect_;
         std::vector<double> xarm_state;
@@ -186,12 +193,13 @@ class CvDetection {
         std_msgs::Header this_head;
         typedef enum {
             ST_INIT = 0,
-            ST_DETECTION_INFER =1,
-            ST_ROUTINE_DETECTION = 2,
-            ST_ROUGH_DETECTION = 3,
-            ST_FINE_DETECTION = 4,
-            ST_SEGMENTATION_INFER = 5,
-            ST_COMPLETE = 6
+            ST_ROUGH_DETECTION =1,//粗目标检测
+            ST_ROUGH_ACTION = 2,//检测到就执行的动作
+            ST_FINE_DETECTION = 3,
+            ST_FINE_ACTION_CIRCLE = 4,
+            ST_FINE_ACTION_MOVE = 5,
+            ST_WAIT=6,
+            ST_COMPLETE = 7
     } ROBOT_ARM_STATE;
     void ProcessState();
     ROBOT_ARM_STATE m_state_ = ST_COMPLETE;

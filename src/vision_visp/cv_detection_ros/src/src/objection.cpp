@@ -102,7 +102,7 @@ Objection::Objection(cv::Rect Box, string name){
     center_point.push_back(0);
     putText(color_mat, grasp_ss.str(), Point(center_x, center_y-60), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 1);
     //5.获得该框内的所有像素点
-    std::cout << "图像平面中心点: " << grasp_world[0] << ", " << grasp_world[1] << ", " << grasp_world[2] <<  std::endl;
+    // std::cout << "图像平面中心点: " << grasp_world[0] << ", " << grasp_world[1] << ", " << grasp_world[2] <<  std::endl;
 
     // pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 

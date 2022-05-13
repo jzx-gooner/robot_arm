@@ -22,7 +22,7 @@
 using namespace std;
 using namespace cv;
 
-#define is_routine_detection false
+#define is_rough_detection false
 
 static std::tuple<uint8_t, uint8_t, uint8_t> hsv2bgr(float h, float s, float v)
 {
@@ -120,14 +120,15 @@ Vec4d lines_intersection(const Vec4d l1, const Vec4d l2)
         double b = sqrt(pow(x4 - x0, 2) + pow(y4 - y0, 2));
         double c = sqrt(pow(x2 - x0, 2) + pow(y2 - y0, 2));
         angle = acos((b * b + c * c - a * a) / (2 * b * c)) * 180 / CV_PI;
-        if(angle>90){
-            angle = angle-90; //永远求锐角
-        }
     }
 
     //根据斜率求正负
     double k = (y2 - y1) / (x2 - x1);
-    if(k<0){
+    std::cout<<"k : "<<k <<" ,angle : "<<std::endl;
+    if(angle>90){
+        angle = 180-abs(angle);//反正就是求锐角
+    }
+    if(k>0){
         angle = -angle;
     }
     return Vec4d(r, x0, y0, angle);
@@ -235,18 +236,18 @@ void draw_extension_line(Mat img, const Vec4d l, Scalar color)
 }
 
 // 画图
-void draw(Mat img, const Vec4d l1, const Vec4d l2)
+float  draw_and_get_angle(Mat img, const Vec4d l1, const Vec4d l2)
 {
     Vec4d v = lines_intersection(l1, l2); // 判断是否相交，并计算交点和夹角
 
     line(img, Point2d(l1[0], l1[1]), Point2d(l1[2], l1[3]), Scalar(255, 0, 0), 2);               // 画蓝线
-    draw_arrow(img, Point2d(l1[0], l1[1]), Point2d(l1[2], l1[3]), 20, 20, Scalar(255, 0, 0), 2); // 画箭头
+    draw_arrow(img, Point2d(l1[0], l1[1]), Point2d(l1[2], l1[3]), 20, 20, Scalar(255, 0, 0), 8); // 画箭头
 
     line(img, Point2d(l2[0], l2[1]), Point2d(l2[2], l2[3]), Scalar(0, 255, 0), 2);               // 画绿线
-    draw_arrow(img, Point2d(l2[0], l2[1]), Point2d(l2[2], l2[3]), 20, 20, Scalar(0, 255, 0), 2); // 画箭头
+    draw_arrow(img, Point2d(l2[0], l2[1]), Point2d(l2[2], l2[3]), 20, 20, Scalar(0, 255, 0), 8); // 画箭头
 
-    draw_extension_line(img, l1, Scalar(255, 0, 0)); // 画延长线
-    draw_extension_line(img, l2, Scalar(0, 255, 0)); // 画延长线
+    // draw_extension_line(img, l1, Scalar(255, 0, 0)); // 画延长线
+    // draw_extension_line(img, l2, Scalar(0, 255, 0)); // 画延长线
 
     draw_angle(img, Point2d(v[1], v[2]), Point2d(l1[2], l1[3]), Point2d(l2[2], l2[3]), 15, Scalar(0, 0, 255), 1); // 画夹角
 
@@ -260,8 +261,9 @@ void draw(Mat img, const Vec4d l1, const Vec4d l2)
     {
         putText(img, "no", Point2d(10, 25), cv::FONT_HERSHEY_COMPLEX, 0.5, Scalar(0, 0, 255));
     }
-    cv::imshow("img", img);
-    cv::waitKey(1);
+    std::cout<<"angle : " <<v[3]<<" , : "<<v[3]*DEG2RAD<<std::endl;
+    return v[3]*DEG2RAD;
+ 
 }
 
 
@@ -320,7 +322,7 @@ void CvDetection::init()
 	xarm_c.motionEnable(1);
     xarm_c.gripperConfig(5000);
     // xarm_c.gripperMove(850);
-    // xarm_c.gripperMove(200);
+    xarm_c.gripperMove(0);
 	xarm_c.setMode(0);
 	xarm_c.setState(0);
 
@@ -359,7 +361,7 @@ void CvDetection::detection_infer(cv::Mat img)
                 auto center = cv::Point(int((obj.left + obj.right) / 2), int((obj.top + obj.bottom) / 2));
                 cv::circle(detection_image, center, 5, cv::Scalar(b, g, r), -1);
                 // 坐标系变换 粗检测的坐标系变换
-                auto temp = Objection(boundingbox, 0,0,0,name);
+                auto temp = Objection(boundingbox,name);
                 m_objetsin2Dimage.push_back(temp);
             }
         }
@@ -385,9 +387,7 @@ void CvDetection::detection_infer(cv::Mat img)
 
 void CvDetection::segmentation_infer(cv::Mat img){
         auto segmentation_image = img.clone();
-        cv::imshow("segmentation_image",segmentation_image);
         auto segmentation_img = cs->inference(segmentation_image);
-        cv::imshow("segmentation_result",segmentation_img);
         cv::Mat binary_image,gray_image;
         cvtColor(segmentation_img, gray_image, CV_BGR2GRAY);
         cv::adaptiveThreshold(gray_image, binary_image, 255, CV_ADAPTIVE_THRESH_MEAN_C,CV_THRESH_BINARY_INV, 25, 10); ///局部自适应二值化函数
@@ -417,6 +417,16 @@ void CvDetection::segmentation_infer(cv::Mat img){
             } // End if
         } // End for
         if(maxAreaContourId>-1){
+                //求轮廓的重心
+                Moments moment;//矩
+                moment = moments(contours.at(0), false);
+                cv::Point pt1;
+                if (moment.m00 != 0)//除数不能为0
+                {
+                    pt1.x = cvRound(moment.m10 / moment.m00);//计算重心横坐标
+                    pt1.y = cvRound(moment.m01 / moment.m00);//计算重心纵坐标
+                }
+                cv::circle(segmentation_image, pt1, 5, cv::Scalar(0, 0, 255), -1);
                 cv::Scalar color(rand() & 255, rand() & 255, rand() & 255);
                 cv::drawContours(contoursImage, contours, maxAreaContourId, Scalar(0), 1, 8, hierarchy);//描绘字符的外轮廓
                 
@@ -436,25 +446,26 @@ void CvDetection::segmentation_infer(cv::Mat img){
                 int lefty = int((lines[2]*slope) + lines[3]);
                 int righty = int(((lines[2]-width)*slope)+lines[3]);
                 cv::line(segmentation_image, {width-1, righty}, {0, lefty}, (255, 255, 0), 2);
-                cout << lines << endl;
-
+                cv::line(segmentation_image, {0, lefty},{width-1, righty} , (255, 255, 255), 8);
+                // cout << lines << endl;
+                // cv::circle(detect ion_image, center, 5, cv::Scalar(b, g, r), -1);
                 //线转成两点式,注意图像坐标系
-                Vec4f line1(width-1, righty,0, lefty);
+                Vec4f line1(0, lefty,width-1, righty);
                 Vec4f line2(width/2,height,width/2,0);
-                draw(segmentation_image, line1,line2);
-        }
-
-        
-        // cv::Rect boundingRect = rotatedRect.boundingRect();//返回包含旋转矩形的最小矩形
-        // cv::Mat newSrc = srcCopy(boundingRect);
-        // //ROI区域倾斜矩形的外接矩形，的旋转中心.
-        // cv::Point newCenter;
-        // newCenter.x = rotatedRect.center.x - boundingRect.x;
-        // newCenter.y = rotatedRect.center.y - boundingRect.y;
-
-
-        cv::imshow("switch-pose",contoursImage);
-        cv::waitKey(1);
+                float angle = draw_and_get_angle(segmentation_image, line1,line2);
+                auto temp = Objection(pt1.x,pt1.y,"switch-key");
+                fine_x = temp.segmentation_center_point[0];
+                fine_y = temp.segmentation_center_point[1];
+                fine_z = temp.segmentation_center_point[2];
+                fine_angle = angle;
+                // auto caption = cv::format("%s %s %s ",fine_x,fine_y,fine_z);
+                // cv::putText(segmentation_image, caption, cv::Point(40, 60), 0, 1, cv::Scalar::all(0), 2, 16);
+                // std::cout<<"fine_angle : "<<fine_angle<<std::endl;
+                }
+        cv::Mat show_img;
+        cv::resize(segmentation_image,show_img,cv::Size(600,400));
+        cv::imshow("segmentation_result", show_img);
+        cv::waitKey(1); 
 
 }
 
@@ -474,7 +485,6 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
             detection_infer(color_mat);
             segmentation_infer(color_mat);
             // angle_test("test",false,color_mat);
-            GriperMove(10); //debug 暂时打印一下角度
             
         }
     }
@@ -647,7 +657,7 @@ void CvDetection::ArmMove(std::vector<float> prep_pos){
 void CvDetection::GriperMove(float angle){
     std::cout<<"搞定旋转"<<std::endl;
     //先开夹爪
-    // xarm_c.gripperMove(200);
+    xarm_c.gripperMove(160);
     //旋转角度 //const std::vector<float>& jnt_v, bool is_sync, float duration
     //先获取当前位置的角度
     std::vector<float> current_angles;
@@ -655,53 +665,49 @@ void CvDetection::GriperMove(float angle){
     //顺时针旋转是正，逆时针旋转是负，角度是弧度
     //限制条件1，度数只允许[-90，90]
     //限制条件2，机械臂关节第六自由度的初始是弧度0
+    std::cout<<"angle : "<<angle<<std::endl;
     std::cout<<"current angles: "<<current_angles[0]<<","<<current_angles[1]<<","<<current_angles[2]<<","<<current_angles[3]<<","<<current_angles[4]<<","<<current_angles[5]<<std::endl;
-    // xarm_c.moveJoint({0,0,0,0,0,angle}, 30, 200);
-
+    std::vector<float> new_angle{current_angles[0],current_angles[1],current_angles[2],current_angles[3],current_angles[4],angle};
+    xarm_c.moveJoint(new_angle, 30, 200);
+    std::cout<<"new angles : "<<new_angle[0]<<","<<new_angle[1]<<","<<new_angle[2]<<","<<new_angle[3]<<","<<new_angle[4]<<","<<new_angle[5]<<std::endl;
 }
 
 void CvDetection::ProcessState() {
     switch (m_state_) {
         case ST_INIT: {
             std::cout<<"m_state : ST_INIT"<<std::endl;
-            //移动到初始位置  --tod0 确定初始位置
+            //移动到初始位置  --tod0 确定初始位置 .确定初始姿态
             ArmMove(m_initpostion);
-            std::cout<<"m_state : ST_INIT - > ST_DETECTION_INFER"<<std::endl;
+            std::cout<<"m_state : ST_INIT - > ST_ROUGH_DETECTION"<<std::endl;
             //进入infer状态
-            m_state_ = ST_DETECTION_INFER;
+            m_state_ = ST_ROUGH_DETECTION;
         }
             break;
 
-        case ST_DETECTION_INFER: {
-            std::cout<<"m_state : ST_DETECTION_INFER"<<std::endl;
+        case ST_ROUGH_DETECTION: {
+            std::cout<<"m_state : ST_ROUGH_DETECTION"<<std::endl;
             //推理图片，如果推理结果正确的话，m_objetsin2Dimage 里面已经更新了信息了，粗检测直接拿去用了，精检测先靠近一下，在拿去用，精简测的话，需要更新一下点
             //沿着当前点与目标点的法向量，延伸10cm！
             if (we_got_something) {
-                if(is_routine_detection){
-                    std::cout<<"m_state : ST_DETECTION_INFER -> ST_ROUTINE_DETECTION"<<std::endl;
-                    m_state_ = ST_ROUTINE_DETECTION;
+                if(is_rough_detection){
+                    std::cout<<"m_state : ST_ROUGH_DETECTION -> ST_ROUGH_ACTION"<<std::endl;
+                    m_state_ = ST_ROUGH_ACTION;
                 }else{
                     m_state_ = ST_FINE_DETECTION;
                 }
-            }else{
-                detection_infer(color_mat);
             }
         }
             break;
 
-        case ST_ROUTINE_DETECTION: {
-            std::cout<<"m_state : ST_ROUTINE_DETECTION"<<std::endl;
+        case ST_ROUGH_ACTION: {
+            std::cout<<"m_state : ST_ROUGH_ACTION"<<std::endl;
             //推理图片，如果推理结果正确的话，（检测到了物体，概率比较高，nms做的比较好），就进入粗检测， 如果推理结果不正确的话，还在init状态，推理下一帧
-    
             for(auto& location : m_objetsin2Dimage){
-
-       
                 //获取物体的点云
                 std::cout<<"控制机械臂"<<std::endl;
                 //得到这个点云的中心点，计算出点和最后一个机械臂的rotation
-
                 //到达目标位置
-                std::vector<float> move_postition{location.center_point[0],location.center_point[1],location.center_point[2],M_PI, 0, 0};
+                std::vector<float> move_postition{location.detection_center_point[0],location.detection_center_point[1],location.detection_center_point[2],M_PI, 0, 0};
                 ArmMove(move_postition);
                 //返回初始位置
                 ArmMove(m_initpostion);
@@ -720,13 +726,43 @@ void CvDetection::ProcessState() {
             auto location = m_objetsin2Dimage[index];
             std::vector<float> move_postition{location.camera_in_center_point[0], location.camera_in_center_point[1], location.camera_in_center_point[2],xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
-            m_state_ = ST_SEGMENTATION_INFER;
+            from_fine_detection_ = true;
+            m_state_ = ST_WAIT;
         }
             break;
 
-        case ST_SEGMENTATION_INFER: {
-            std::cout<<"m_state : ST_SEGMENTATION_INFER "<<std::endl;
-            //创建一个全局变量，计算当前的roll 和  中心点 得到这个位置
+        
+        case ST_WAIT: {
+            std::cout<<"m_state : ST_WAIT "<<std::endl;
+            wait_count_++;
+            if(wait_count_>10){
+                wait_count_ = 0;
+                if(from_fine_detection_){
+                    m_state_ = ST_FINE_ACTION_CIRCLE;
+                    from_fine_detection_ = false;
+                }else{
+                    m_state_ = ST_FINE_ACTION_MOVE;
+                }
+                
+            }
+        }
+            break;
+
+        case ST_FINE_ACTION_CIRCLE: {
+            std::cout<<"m_state : ST_FINE_ACTION_CIRCLE "<<std::endl;
+            GriperMove(fine_angle);
+            m_state_ = ST_WAIT;
+            
+        }
+            break;
+        
+        case ST_FINE_ACTION_MOVE: {
+            std::cout<<"m_state : ST_FINE_ACTION_MOVE "<<std::endl;
+            std::vector<float> move_postition{fine_x, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
+            ArmMove(move_postition);
+            m_state_ = ST_COMPLETE;
+            ArmMove(m_initpostion);
+            
         }
             break;
 

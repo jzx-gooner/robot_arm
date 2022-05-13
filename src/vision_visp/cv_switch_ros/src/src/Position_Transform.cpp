@@ -60,7 +60,7 @@ std::array<int, 3> Position_Transform::Get_XYZ() {
     // cout<<"Depth_Pix:"<<Depth_Pix.at(0)<<" "<<Depth_Pix.at(1)<<endl;
     Image_Pix<<Depth_Pix.at(0),Depth_Pix.at(1),1.00;
     //取stride*stride的方块来求平均距离
-    int stride = 0;
+    int stride = 2;
     int start_x = Depth_Pix.at(0) - stride;
     int start_y = Depth_Pix.at(1) - stride;
     int end_x = Depth_Pix.at(0) + stride;
@@ -116,7 +116,7 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
         // double ty = -32.21690881661964;
         double tx = 69.1845508606165;
         double ty = -30.68690881661964;
-        double tz = -188.596799;
+        double tz = -168.596799;
         //旋转矩阵 初始化顺序，wxyz
         Eigen::Quaterniond q(qw,qx,qy,qz);
         q.normalize();
@@ -157,7 +157,7 @@ Eigen::Vector3f Position_Transform::Get_ROBOT_TOOL_XYZ() {
         result= matrix_ObjToBase*ObjPosition;
         Eigen::Vector3f temp2;
         temp2<<result(0),result(1),result(2);
-        // cout<<"输出结果"<<result(0)<<","<<result(1)<<","<<result(2)<<endl;
+        // cout<<"工具视野的输出结果"<<result(0)<<","<<result(1)<<","<<result(2)<<endl;
 
         return temp2;
 }
@@ -174,8 +174,8 @@ Eigen::Vector3f Position_Transform::Get_CAMERA_TOOL_XYZ() {
         double qy = -0.003477682492098677;
         double qz = 0.7128379885223908;
         double tx = 0;
-        double ty = 0;
-        double tz = -188.596799;
+        double ty = 0; 
+        double tz = -300; //距离260
         //旋转矩阵 初始化顺序，wxyz
         Eigen::Quaterniond q(qw,qx,qy,qz);
         q.normalize();
@@ -216,7 +216,7 @@ Eigen::Vector3f Position_Transform::Get_CAMERA_TOOL_XYZ() {
         result= matrix_ObjToBase*ObjPosition;
         Eigen::Vector3f temp2;
         temp2<<result(0),result(1),result(2);
-        // cout<<"输出结果"<<result(0)<<","<<result(1)<<","<<result(2)<<endl;
+        // cout<<"相机视野的输出结果"<<result(0)<<","<<result(1)<<","<<result(2)<<endl;
 
         return temp2;
 }
