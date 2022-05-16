@@ -375,3 +375,113 @@ void angle_test(string mode, bool viewICP,cv::Mat& raw_img){
 //     angle_test("test",true);
 //     return 0;
 // }
+
+
+
+
+void angle_infer(string mode, bool viewICP,cv::Mat& raw_img){
+    line2Dup::Detector detector(100, {4}, 20, 50); //第一个是检测点个数字，第三个是匹配时候的，第四个是提取时候的
+    //https://github.com/meiqua/shape_based_matching/issues/24
+    std::vector<std::string> ids;
+    //todo 加载多个模型，配置文件
+    ids.push_back("test");
+    detector.readClasses(ids, prefix+"case7/%s_templ.yaml");
+    auto infos = shape_based_matching::shapeInfo_producer::load_infos(prefix + "case7/test_info.yaml");
+    Mat test_img = raw_img.clone();
+    int h = test_img.rows;
+    int w = test_img.cols;
+    //这里：把图像放大了，因为是crop size的图像。如果是原始图像的话，就要缩小，减少计算量
+    cv::resize(test_img, test_img,cv::Size(2*w, 2*w));
+    assert(!test_img.empty() && "check your img");
+    // pading 图片
+    int padding = 10;
+    cv::Mat padded_img = cv::Mat(test_img.rows + 2*padding,
+                                    test_img.cols + 2*padding, test_img.type(), cv::Scalar::all(0));
+    test_img.copyTo(padded_img(Rect(padding, padding, test_img.cols, test_img.rows)));
+    
+    int stride = 16;
+    int n = padded_img.rows/stride;
+    int m = padded_img.cols/stride;
+    Rect roi(0, 0, stride*m , stride*n);
+    Mat img = padded_img(roi).clone();
+    std::cout << "test img size: " << img.rows * img.cols << std::endl << std::endl;
+    // 匹配模板
+    auto matches = detector.match(img,70,ids); //360
+    //用NMS过滤，这个待优化
+    // std::vector<int> idxs;
+    // {
+    //     std::vector<cv::Rect> bboxes;
+    //     std::vector<float> scores;
+    //     for (const auto& match : matches) {
+    //         bboxes.push_back(cv::Rect(match.x, match.y,
+    //                                 180, 130));
+    //         scores.push_back(match.similarity);
+    //     }
+    //     NMSBoxes(bboxes, scores, 0, 90,idxs);
+    // }
+    // MatchingResultVec new_matching_vec;
+    // for (const auto id : idxs) {
+    //     new_matching_vec.push_back(std::move(matches[id]));
+    // }
+    //用NMS
+    // std::cout << "new_matching_vec.size(): " << matches.size() << std::endl;
+    size_t top5 = 1;
+    if(top5>matches.size()) top5=matches.size();
+    if(img.channels() == 1) cvtColor(img, img, CV_GRAY2BGR);
+
+    cv::Mat edge_global;  // get edge
+    {
+        cv::Mat gray;
+        if(img.channels() > 1){
+            cv::cvtColor(img, gray, CV_BGR2GRAY);
+        }else{
+            gray = img;
+        }
+
+        cv::Mat smoothed = gray;
+        cv::Canny(smoothed, edge_global, 100, 200);
+
+        if(edge_global.channels() == 1) cvtColor(edge_global, edge_global, CV_GRAY2BGR);
+    }
+
+    for(int i=top5-1; i>=0; i--)
+    {
+        Mat edge = edge_global.clone();
+
+        auto match = matches[i];
+        auto templ = detector.getTemplates("test",
+                                            match.template_id);
+
+        // cuda——icp 暂时没必要做 不需要0.1度的精度，提高速度
+        // 100 is padding when training // 270 is width of template image
+        // tl_x/y: template croping topleft corner when training
+        // float r_scaled = 174/2.0f*infos[match.template_id].scale;
+        // scaling won't affect this, because it has been determined by warpAffine
+        // cv::warpAffine(src, dst, rot_mat, src.size()); last param
+        // float train_img_half_width = 174/2.0f + 100;
+        // center x,y of train_img in test img
+        // float x =  match.x - templ[0].tl_x + train_img_half_width;
+        // float y =  match.y - templ[0].tl_y + train_img_half_width;
+        // vector<::Vec2f> model_pcd(templ[0].features.size());
+        // for(int i=0; i<templ[0].features.size(); i++){
+        //     auto& feat = templ[0].features[i];
+        //     model_pcd[i] = {
+        //         float(feat.x + match.x),
+        //         float(feat.y + match.y)
+        //     };
+        // }
+        // cuda_icp::RegistrationResult result = cuda_icp::ICP2D_Point2Plane_cpu(model_pcd, scene);
+        cv::Vec3b randColor;
+        randColor[0] = 0;
+        randColor[1] = 0;
+        randColor[2] = 255;
+        for(int i=0; i<templ[0].features.size(); i++){
+            auto feat = templ[0].features[i];     
+            cv::circle(img, {feat.x+match.x, feat.y+match.y}, 2, randColor, -1);
+        }
+        double init_angle = infos[match.template_id].angle;
+        cv::putText(img, to_string(init_angle), {18, 18}, cv::FONT_HERSHEY_SIMPLEX, 0.5, randColor, 1);
+    cv::imshow("shape based match",img);
+    cv::waitKey(1000);
+}
+}
