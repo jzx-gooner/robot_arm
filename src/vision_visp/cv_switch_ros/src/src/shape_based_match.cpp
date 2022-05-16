@@ -429,25 +429,9 @@ void angle_infer(string mode, bool viewICP,cv::Mat& raw_img){
     if(top5>matches.size()) top5=matches.size();
     if(img.channels() == 1) cvtColor(img, img, CV_GRAY2BGR);
 
-    cv::Mat edge_global;  // get edge
-    {
-        cv::Mat gray;
-        if(img.channels() > 1){
-            cv::cvtColor(img, gray, CV_BGR2GRAY);
-        }else{
-            gray = img;
-        }
-
-        cv::Mat smoothed = gray;
-        cv::Canny(smoothed, edge_global, 100, 200);
-
-        if(edge_global.channels() == 1) cvtColor(edge_global, edge_global, CV_GRAY2BGR);
-    }
 
     for(int i=top5-1; i>=0; i--)
     {
-        Mat edge = edge_global.clone();
-
         auto match = matches[i];
         auto templ = detector.getTemplates("test",
                                             match.template_id);
@@ -471,17 +455,13 @@ void angle_infer(string mode, bool viewICP,cv::Mat& raw_img){
         //     };
         // }
         // cuda_icp::RegistrationResult result = cuda_icp::ICP2D_Point2Plane_cpu(model_pcd, scene);
-        cv::Vec3b randColor;
-        randColor[0] = 0;
-        randColor[1] = 0;
-        randColor[2] = 255;
         for(int i=0; i<templ[0].features.size(); i++){
             auto feat = templ[0].features[i];     
-            cv::circle(img, {feat.x+match.x, feat.y+match.y}, 2, randColor, -1);
+            cv::circle(img, {feat.x+match.x, feat.y+match.y}, 2, cv::Vec3b{0,0,255}, -1);
         }
         double init_angle = infos[match.template_id].angle;
         cv::putText(img, to_string(init_angle), {18, 18}, cv::FONT_HERSHEY_SIMPLEX, 0.5, randColor, 1);
     cv::imshow("shape based match",img);
     cv::waitKey(1000);
-}
+    }
 }
