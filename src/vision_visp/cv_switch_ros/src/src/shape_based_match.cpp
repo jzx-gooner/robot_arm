@@ -379,7 +379,7 @@ void angle_test(string mode, bool viewICP,cv::Mat& raw_img){
 
 
 
-void angle_infer(string mode, bool viewICP,cv::Mat& raw_img){
+void angle_infer(cv::Mat& raw_img,float& angle,cv::Point2d& center_point){
     line2Dup::Detector detector(100, {4}, 20, 50); //第一个是检测点个数字，第三个是匹配时候的，第四个是提取时候的
     //https://github.com/meiqua/shape_based_matching/issues/24
     std::vector<std::string> ids;
@@ -455,12 +455,22 @@ void angle_infer(string mode, bool viewICP,cv::Mat& raw_img){
         //     };
         // }
         // cuda_icp::RegistrationResult result = cuda_icp::ICP2D_Point2Plane_cpu(model_pcd, scene);
+        vector<Point> vp;
         for(int i=0; i<templ[0].features.size(); i++){
             auto feat = templ[0].features[i];     
             cv::circle(img, {feat.x+match.x, feat.y+match.y}, 2, cv::Vec3b{0,0,255}, -1);
+            vp.push_back(cv::Point2d{feat.x+match.x,feat.y+match.y});
         }
-        double init_angle = infos[match.template_id].angle;
-        cv::putText(img, to_string(init_angle), {18, 18}, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Vec3b{0,0,255}, 1);
+        //求重心
+        Moments moment;//矩
+            moment = moments(vp, false);
+            if (moment.m00 != 0)//除数不能为0
+            {
+                center_point.x = cvRound(moment.m10 / moment.m00);//计算重心横坐标
+                center_point.y = cvRound(moment.m01 / moment.m00);//计算重心纵坐标
+            }
+        double angle = infos[match.template_id].angle;
+        cv::putText(img, to_string(angle), {18, 18}, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Vec3b{0,0,255}, 1);
     cv::imshow("shape based match",img);
     cv::waitKey(1000);
     }
