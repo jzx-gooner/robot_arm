@@ -751,7 +751,7 @@ void CvDetection::ProcessState() {
             //输入是目标的位置一组 （x,y,z） 。需要loop执行
             std::cout<< set_arm_x_ <<"-"<<xarm_state[0]<<","<<set_arm_y_<<"-"<<xarm_state[1]<<","<<set_arm_z_ <<" - "<<xarm_state[2]<<std::endl;
             if((set_arm_x_ - xarm_state[0])<1 && (set_arm_y_ - xarm_state[1])<1 && (set_arm_z_ - xarm_state[2])<1){
-               m_state_ = ST_WAIT; 
+               m_state_ = ST_WAIT;
                break;
             }
         }

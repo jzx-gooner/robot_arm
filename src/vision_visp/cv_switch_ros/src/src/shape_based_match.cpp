@@ -384,7 +384,7 @@ void angle_infer(cv::Mat& raw_img,float& angle,cv::Point2d& center_point){
     //https://github.com/meiqua/shape_based_matching/issues/24
     std::vector<std::string> ids;
     //todo 加载多个模型，配置文件
-    ids.push_back("test");
+    ids.push_back("switch_key");
     detector.readClasses(ids, prefix+"case7/%s_templ.yaml");
     auto infos = shape_based_matching::shapeInfo_producer::load_infos(prefix + "case7/test_info.yaml");
     Mat test_img = raw_img.clone();
