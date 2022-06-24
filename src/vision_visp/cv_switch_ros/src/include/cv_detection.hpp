@@ -186,6 +186,7 @@ class CvDetection {
 
         int wait_count_ = 0;
         bool IS_AFTER_ST_MOVE_TO_FINE_DETECTION_ = false;
+        bool IS_AFTER_ST_FINE_ACTION_MOVE_ = false;
 
         cv::Rect region_rect_;
         std::vector<double> xarm_state;
@@ -205,15 +206,15 @@ class CvDetection {
             ST_FINE_DETECTION = 4,
             ST_FINE_ACTION_CIRCLE = 5,
             ST_FINE_ACTION_MOVE = 6,
-            ST_WAIT=7,
-            ST_CHECK_ARM_ARRIVE = 8,
-            ST_WAIT_BEGIN_FINE_ACTION_MOVE = 9,
-            ST_WAIT_WAIT = 10,
-            ST_COMPLETE = 11
+             ST_FINE_ACTION_CIRCLE_BACK = 7,
+            ST_WAIT=8,
+            ST_CHECK_ARM_ARRIVE = 9,
+            ST_COMPLETE = 10
     } ROBOT_ARM_STATE;
     void ProcessState();
     ROBOT_ARM_STATE m_state_ = ST_COMPLETE;
     std::vector<SimpleYolo::Box> det_objs;
+    //这是个很重要的初始位置
     std::vector<float> m_initpostion{347,-74.8,307.1,0, M_PI_2, 0};
 };
 
@@ -230,7 +231,7 @@ displayText(cv::Mat &img, std::string &text, const cv::Point2i &textLoc, double 
 }
 
 static const char *cocolabels[] = {
-    "lm", "ls", "car", "motorcycle", "airplane",
+    "switch", "ls", "car", "motorcycle", "airplane",
     "bus", "train", "truck", "boat", "traffic light", "fire hydrant",
     "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
     "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",

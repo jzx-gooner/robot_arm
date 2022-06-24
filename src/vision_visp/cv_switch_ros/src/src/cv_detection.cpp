@@ -2,8 +2,6 @@
 // Created by jzx
 //
 
-//todo : 1.确定一个初始位置。
-//todo : 2.初始位置确定之后，确定routine检测 可不可以
 
 #include "cv_detection.hpp"
 #include "cv_segmentation.hpp"
@@ -741,6 +739,9 @@ void CvDetection::ProcessState() {
 
         case ST_MOVE_TO_FINE_DETECTION: {
             //输入是目标的位置一组 （x,y,z） 。需要loop执行
+
+            //todo 如果检测到多物体了，确定哪一个？？
+
             std::cout<<"m_state : ST_MOVE_TO_FINE_DETECTION "<<std::endl;
             //根据服务的消息，确定处理哪一个，所以不loop了
             int index = 0;
@@ -758,7 +759,7 @@ void CvDetection::ProcessState() {
 
         
         case ST_CHECK_ARM_ARRIVE: {
-            //输入是目标的位置一组 （x,y,z） 。需要loop执行
+            std::cout<<"m_state : ST_CHECK_ARM_ARRIVE "<<std::endl;
             std::cout<< set_arm_x_ <<"-"<<xarm_state[0]<<","<<set_arm_y_<<"-"<<xarm_state[1]<<","<<set_arm_z_ <<" - "<<xarm_state[2]<<std::endl;
             if((set_arm_x_ - xarm_state[0])<1 && (set_arm_y_ - xarm_state[1])<1 && (set_arm_z_ - xarm_state[2])<1){
                m_state_ = ST_WAIT;
@@ -777,11 +778,15 @@ void CvDetection::ProcessState() {
                     m_state_ = ST_FINE_DETECTION;
                     IS_AFTER_ST_MOVE_TO_FINE_DETECTION_ = false;
                     break;
-                }else{
+                }else if(IS_AFTER_ST_FINE_ACTION_MOVE_){
+                    m_state_ = ST_FINE_ACTION_CIRCLE_BACK;
+                    IS_AFTER_ST_FINE_ACTION_MOVE_ = false;
+                    break;
+                }
+                else{
                     m_state_ = ST_FINE_ACTION_MOVE;
                     break;
                 }
-                
             }
         }
             break;
@@ -789,13 +794,12 @@ void CvDetection::ProcessState() {
         case ST_FINE_DETECTION: {
             std::cout<<"m_state : ST_FINE_DETECTION "<<std::endl;
             //如果是segmentation
-            //如果是模板匹配
+            //如果是模板匹配 这个地方更新一下角度和具体三维坐标 todo ：
             int index = 0;
             auto location = m_objetsin2Dimage[index];
             cv::Mat crop_image = color_mat(location.boundingbox);
             template_match_infer(crop_image);
             m_state_ = ST_FINE_ACTION_CIRCLE;
-            
         }
             break;
 
@@ -804,56 +808,35 @@ void CvDetection::ProcessState() {
             float fine_angle = -66*DEG2RAD;
             GriperMove(fine_angle);
             m_state_ = ST_WAIT;
-            
+
         }
             break;
-        
+        case ST_FINE_ACTION_CIRCLE_BACK: {
+            /*拧+松爪*/
+            std::cout<<"m_state : ST_FINE_ACTION_CIRCLE_BACK "<<std::endl;
+            float fine_angle = 28*DEG2RAD;
+            GriperMove(fine_angle);
+            xarm_c.gripperMove(450);
+            m_state_ = ST_COMPLETE;
+
+        }
+            break;
         case ST_FINE_ACTION_MOVE: {
             std::cout<<"m_state : ST_FINE_ACTION_MOVE "<<std::endl;
             //依旧是默认第一个位置，这个index是需要服务传进来的
+            set_arm_x_ = fine_x+1;
+            set_arm_y_ = fine_y;
+            set_arm_z_ = fine_z;
             std::vector<float> move_postition{fine_x+1, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
-            
-            float fine_angle = 28*DEG2RAD;
-            GriperMove(fine_angle);
-
-            m_state_ = ST_WAIT_BEGIN_FINE_ACTION_MOVE;
-
-            
-        }
-            break;
-
-        case ST_WAIT_BEGIN_FINE_ACTION_MOVE:{
-
-
-            std::cout<<"m_state : ST_WAIT_BEGIN_FINE_ACTION_MOVE "<<std::endl;
-            wait_count_++;
-            if(wait_count_>10){
-                wait_count_ = 0;
-                xarm_c.gripperMove(450);
-                std::vector<float> move_postition{fine_x-100, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
-                ArmMove(move_postition);
-                m_state_ = ST_WAIT_WAIT;
-                break;
-                }
-                
-            }
-            
-            break;
-
-        case ST_WAIT_WAIT:{
-            wait_count_++;
-            if(wait_count_>10){
-                wait_count_ = 0;
-                m_state_ = ST_COMPLETE;
-                break;
-            }
+            IS_AFTER_ST_FINE_ACTION_MOVE_ = true;
+            m_state_ =  ST_CHECK_ARM_ARRIVE;
         }
             break;
 
         case ST_COMPLETE: {
+            std::cout<<"m_state : ST_COMPLETE "<<std::endl;
             ArmMove(m_initpostion);
-            
         }
             break;
         default:
