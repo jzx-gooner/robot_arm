@@ -301,7 +301,7 @@ void CvDetection::init()
     auto mode = SimpleYolo::Mode::FP32;
     string model_path = "/home/jzx/robot_arm_models/yolov5s.engine";
     SimpleYolo::set_device(device_id);
-    float confidence_threshold = 0.25f;
+    float confidence_threshold = 0.4f;
     float nms_threshold = 0.5f;
     yolo_ = SimpleYolo::create_infer(model_path, type, device_id, confidence_threshold, nms_threshold);
     if (yolo_ == nullptr)
@@ -325,6 +325,14 @@ void CvDetection::init()
     xarm_c.gripperMove(0);
 	xarm_c.setMode(0);
 	xarm_c.setState(0);
+
+
+    //
+    float fine_angle = -66*DEG2RAD;
+
+    GriperMove(fine_angle);
+
+    GriperMove(14*DEG2RAD);
 
 }
 
@@ -493,8 +501,7 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
             dataman::GetInstance()->Setcolormat(color_mat);
             detection_infer(color_mat);
             segmentation_infer(color_mat);
-            
-            
+
         }
     }
     catch (cv_bridge::Exception &e)
@@ -678,6 +685,9 @@ void CvDetection::GriperMove(float angle){
     //限制条件2，机械臂关节第六自由度的初始是弧度0
     // std::cout<<"angle : "<<angle<<std::endl;
     // std::cout<<"current angles: "<<current_angles[0]<<","<<current_angles[1]<<","<<current_angles[2]<<","<<current_angles[3]<<","<<current_angles[4]<<","<<current_angles[5]<<std::endl;
+    
+    // 这个地方要搞好angle计算
+    // 先把这个地方的angle写死
     std::vector<float> new_angle{current_angles[0],current_angles[1],current_angles[2],current_angles[3],current_angles[4],angle};
     xarm_c.moveJoint(new_angle, 30, 200);
     // std::cout<<"new angles : "<<new_angle[0]<<","<<new_angle[1]<<","<<new_angle[2]<<","<<new_angle[3]<<","<<new_angle[4]<<","<<new_angle[5]<<std::endl;
@@ -761,7 +771,7 @@ void CvDetection::ProcessState() {
         case ST_WAIT: {
             std::cout<<"m_state : ST_WAIT "<<std::endl;
             wait_count_++;
-            if(wait_count_>30){
+            if(wait_count_>10){
                 wait_count_ = 0;
                 if(IS_AFTER_ST_MOVE_TO_FINE_DETECTION_){
                     m_state_ = ST_FINE_DETECTION;
@@ -791,6 +801,7 @@ void CvDetection::ProcessState() {
 
         case ST_FINE_ACTION_CIRCLE: {
             std::cout<<"m_state : ST_FINE_ACTION_CIRCLE "<<std::endl;
+            float fine_angle = -66*DEG2RAD;
             GriperMove(fine_angle);
             m_state_ = ST_WAIT;
             
@@ -800,14 +811,49 @@ void CvDetection::ProcessState() {
         case ST_FINE_ACTION_MOVE: {
             std::cout<<"m_state : ST_FINE_ACTION_MOVE "<<std::endl;
             //依旧是默认第一个位置，这个index是需要服务传进来的
-            std::vector<float> move_postition{fine_x, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
+            std::vector<float> move_postition{fine_x+1, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
-            m_state_ = ST_COMPLETE;
-            ArmMove(m_initpostion);
+            
+            float fine_angle = 28*DEG2RAD;
+            GriperMove(fine_angle);
+
+            m_state_ = ST_WAIT_BEGIN_FINE_ACTION_MOVE;
+
+            
+        }
+            break;
+
+        case ST_WAIT_BEGIN_FINE_ACTION_MOVE:{
+
+
+            std::cout<<"m_state : ST_WAIT_BEGIN_FINE_ACTION_MOVE "<<std::endl;
+            wait_count_++;
+            if(wait_count_>10){
+                wait_count_ = 0;
+                xarm_c.gripperMove(450);
+                std::vector<float> move_postition{fine_x-100, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
+                ArmMove(move_postition);
+                m_state_ = ST_WAIT_WAIT;
+                break;
+                }
+                
+            }
+            
+            break;
+
+        case ST_WAIT_WAIT:{
+            wait_count_++;
+            if(wait_count_>10){
+                wait_count_ = 0;
+                m_state_ = ST_COMPLETE;
+                break;
+            }
         }
             break;
 
         case ST_COMPLETE: {
+            ArmMove(m_initpostion);
+            
         }
             break;
         default:

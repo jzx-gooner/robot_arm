@@ -338,7 +338,7 @@ void angle_test(string mode, bool viewICP,cv::Mat& raw_img){
         }
         // cv::imwrite(prefix+"case7/test.png", img);
         cv::imshow("shape based match",img);
-        cv::waitKey(1000);
+        cv::waitKey(10);
 
         // std::cout << "test end" << std::endl << std::endl;
     }

@@ -207,12 +207,14 @@ class CvDetection {
             ST_FINE_ACTION_MOVE = 6,
             ST_WAIT=7,
             ST_CHECK_ARM_ARRIVE = 8,
-            ST_COMPLETE = 9
+            ST_WAIT_BEGIN_FINE_ACTION_MOVE = 9,
+            ST_WAIT_WAIT = 10,
+            ST_COMPLETE = 11
     } ROBOT_ARM_STATE;
     void ProcessState();
     ROBOT_ARM_STATE m_state_ = ST_COMPLETE;
     std::vector<SimpleYolo::Box> det_objs;
-    std::vector<float> m_initpostion{506,-35,413,-M_PI, 0, 0};
+    std::vector<float> m_initpostion{347,-74.8,307.1,0, M_PI_2, 0};
 };
 
 inline void displayDot(cv::Mat &img, const cv::Point2i &dotLoc, double dotScale,

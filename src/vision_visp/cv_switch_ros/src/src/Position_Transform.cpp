@@ -175,7 +175,7 @@ Eigen::Vector3f Position_Transform::Get_CAMERA_TOOL_XYZ() {
         double qz = 0.7128379885223908;
         double tx = 0;
         double ty = 0; 
-        double tz = -300; //距离260
+        double tz = -350; //距离260
         //旋转矩阵 初始化顺序，wxyz
         Eigen::Quaterniond q(qw,qx,qy,qz);
         q.normalize();
