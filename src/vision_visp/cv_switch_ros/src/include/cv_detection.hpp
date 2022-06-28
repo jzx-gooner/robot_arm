@@ -206,7 +206,7 @@ class CvDetection {
             ST_FINE_DETECTION = 4,
             ST_FINE_ACTION_CIRCLE = 5,
             ST_FINE_ACTION_MOVE = 6,
-             ST_FINE_ACTION_CIRCLE_BACK = 7,
+            ST_FINE_ACTION_CIRCLE_BACK = 7,
             ST_WAIT=8,
             ST_CHECK_ARM_ARRIVE = 9,
             ST_COMPLETE = 10

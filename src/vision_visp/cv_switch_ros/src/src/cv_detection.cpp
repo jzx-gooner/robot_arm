@@ -325,7 +325,7 @@ void CvDetection::init()
 	xarm_c.setState(0);
 
 
-    //
+
     float fine_angle = -66*DEG2RAD;
 
     GriperMove(fine_angle);
@@ -466,10 +466,21 @@ void CvDetection::segmentation_infer(cv::Mat img){
                 fine_x = temp.segmentation_center_point[0];
                 fine_y = temp.segmentation_center_point[1];
                 fine_z = temp.segmentation_center_point[2];
-                fine_angle = angle;
+                //根据斜率判断angle
+                if(slope<0){
+                    std::cout<<"slope 小于0"<<std::endl;
+                    fine_angle = 66;
+                }else{
+                    std::cout<<"slope 大于0"<<std::endl;
+                    fine_angle = -52;
+                }
+
+                
                 // auto caption = cv::format("%s %s %s ",fine_x,fine_y,fine_z);
                 // cv::putText(segmentation_image, caption, cv::Point(40, 60), 0, 1, cv::Scalar::all(0), 2, 16);
                 // std::cout<<"fine_angle : "<<fine_angle<<std::endl;
+
+                
                 }
         cv::Mat show_img;
         cv::resize(segmentation_image,show_img,cv::Size(600,400));
@@ -498,7 +509,7 @@ void CvDetection::imgCallback(const sensor_msgs::CompressedImage::ConstPtr &imag
             color_mat = cv::imdecode(cv::Mat(image_msg->data), 1); // convert compressed image data to cv::Mat
             dataman::GetInstance()->Setcolormat(color_mat);
             detection_infer(color_mat);
-            segmentation_infer(color_mat);
+            // segmentation_infer(color_mat);
 
         }
     }
@@ -673,7 +684,7 @@ int CvDetection::ArmMove(std::vector<float> prep_pos){
 void CvDetection::GriperMove(float angle){
     // std::cout<<"搞定旋转"<<std::endl;
     //先开夹爪
-    xarm_c.gripperMove(160);
+    // xarm_c.gripperMove(450);
     //旋转角度 //const std::vector<float>& jnt_v, bool is_sync, float duration
     //先获取当前位置的角度
     std::vector<float> current_angles;
@@ -696,6 +707,9 @@ void CvDetection::ProcessState() {
         case ST_INIT: {
             std::cout<<"m_state : ST_INIT"<<std::endl;
             //移动到初始位置  --tod0 确定初始位置 .确定初始姿态
+            //开夹爪
+            xarm_c.gripperMove(450);
+            
             ArmMove(m_initpostion);
             std::cout<<"m_state : ST_INIT - > ST_ROUGH_DETECTION"<<std::endl;
             //进入infer状态
@@ -795,6 +809,9 @@ void CvDetection::ProcessState() {
             std::cout<<"m_state : ST_FINE_DETECTION "<<std::endl;
             //如果是segmentation
             //如果是模板匹配 这个地方更新一下角度和具体三维坐标 todo ：
+            detection_infer(color_mat);
+            segmentation_infer(color_mat);
+            //可能有检测不到的情况发生，如果有检测不到的情况
             int index = 0;
             auto location = m_objetsin2Dimage[index];
             cv::Mat crop_image = color_mat(location.boundingbox);
@@ -805,6 +822,7 @@ void CvDetection::ProcessState() {
 
         case ST_FINE_ACTION_CIRCLE: {
             std::cout<<"m_state : ST_FINE_ACTION_CIRCLE "<<std::endl;
+            std::cout<<"ok:------------------ok"<<fine_angle<<std::endl;
             float fine_angle = -66*DEG2RAD;
             GriperMove(fine_angle);
             m_state_ = ST_WAIT;
@@ -814,9 +832,10 @@ void CvDetection::ProcessState() {
         case ST_FINE_ACTION_CIRCLE_BACK: {
             /*拧+松爪*/
             std::cout<<"m_state : ST_FINE_ACTION_CIRCLE_BACK "<<std::endl;
+            xarm_c.gripperMove(220);
             float fine_angle = 28*DEG2RAD;
             GriperMove(fine_angle);
-            xarm_c.gripperMove(450);
+            xarm_c.gripperMove(460);
             m_state_ = ST_COMPLETE;
 
         }
@@ -827,7 +846,7 @@ void CvDetection::ProcessState() {
             set_arm_x_ = fine_x+1;
             set_arm_y_ = fine_y;
             set_arm_z_ = fine_z;
-            std::vector<float> move_postition{fine_x+1, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
+            std::vector<float> move_postition{fine_x+4, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
             IS_AFTER_ST_FINE_ACTION_MOVE_ = true;
             m_state_ =  ST_CHECK_ARM_ARRIVE;

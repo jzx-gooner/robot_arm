@@ -1,3 +1,11 @@
 <launch>
     <node name="cv_switch" pkg="cv_switch" type="cv_switch" output="screen"/>
+    <param name="init_x" type="double" value="100.0" />
+    <param name="init_y" type="double" value="600.0" />
+    <param name="init_z" type="double" value="600.0" />
+    <param name="init_roll" type="double" value="600.0" />
+    <param name="init_yaw" type="double" value="600.0" />
+    <param name="init_pitch" type="double" value="600.0" />
+    <param name="nums_of_switch_degree" type="double" value="3" />
+
 </launch>

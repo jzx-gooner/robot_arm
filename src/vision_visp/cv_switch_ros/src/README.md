@@ -42,14 +42,48 @@
 
 ### 更新为了孙村的演示项目 
 
-* 机械臂移动采用{6个轴的方案}
+~~ * 机械臂移动采用{6个轴的方案} ~~
 
-* 首先要判断，当时图像是正向的还是反向的。这个正向还是反向的决定拟合的直线是多少度数。
+* 首先要判断，当时图像是正向的还是反向的。这个正向还是反向的决定拟合的直线是多少度数。如果realsense在正上方表示图像采集的是正图像。如果realsense在机械臂下边，表示采集的是相反的图像。
 
 * 实现一个函数，根据拟合的直线决定开关的角度。这个开关配置，后期抽成配置文件
 
 * opencv 弹窗 有个确认按钮，首先确认是否检测到，然后确认角度是否拟合正确 
 
 * 两种方案。（1）远程搭建个虚拟机，然后重新配置环境，ros通讯读入realsense的消息？？？（2）把系统刷如新的开发板里面
-* 确定一下抖动是什么原因
-* 准备处理多个目标的问题，如果多个目标，谁最靠近中间，优先处理谁
+
+* 确定一下抖动是什么原因(应该是一直发送命令的原因)
+
+* 准备处理多个目标的问题，如果多个目标，谁最靠近中间，优先处理谁 
+
+* 仅仅为了演示功能： 把那个轨迹录制的功能摸清楚，直接录制轨迹
+
+
+### 基本说明
+
+1.launch文件下需要修改的参数有：
+
+* 基础的位置，在这个位置下能够清楚的看到开关。且距离开关大于30cm，位置在xarm机械臂软件上读取，{x,y,z,roll,yaw,pitch}
+
+* nums_of_switch_degree设定为3表示开关一共有三档。从左到右角度依次为 -30，0,30  。垂直向上为0度，左倾斜为负数，右倾斜为正数。这个需要提前量一下，估算一下。
+
+* 如果检测不到图像，可能是模型不够好。需要修改模型。
+
+
+```
+<launch>
+    <node name="cv_switch" pkg="cv_switch" type="cv_switch" output="screen"/>
+    <param name="init_x" type="double" value="100.0" />
+    <param name="init_y" type="double" value="600.0" />
+    <param name="init_z" type="double" value="600.0" />
+    <param name="init_roll" type="double" value="600.0" />
+    <param name="init_yaw" type="double" value="600.0" />
+    <param name="init_pitch" type="double" value="600.0" />
+    <param name="nums_of_switch_degree" type="double" value="3" />
+    <param name="degree_0" type="double" value="-30" />
+    <param name="degree_1" type="double" value="0" />
+    <param name="degree_2" type="double" value="30" />
+
+</launch>
+
+```
