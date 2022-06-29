@@ -473,10 +473,10 @@ void CvDetection::segmentation_infer(cv::Mat img,bool save_img){
                 //根据斜率判断angle
                 if(slope<0){
                     std::cout<<"slope 小于0"<<std::endl;
-                    fine_angle = 66;
+                    fine_angle = -66;
                 }else{
                     std::cout<<"slope 大于0"<<std::endl;
-                    fine_angle = -52;
+                    fine_angle = 52;
                 }
                 // auto caption = cv::format("%s %s %s ",fine_x,fine_y,fine_z);
                 // cv::putText(segmentation_image, caption, cv::Point(40, 60), 0, 1, cv::Scalar::all(0), 2, 16);
@@ -826,8 +826,8 @@ void CvDetection::ProcessState() {
         case ST_FINE_ACTION_CIRCLE: {
             std::cout<<"m_state : ST_FINE_ACTION_CIRCLE "<<std::endl;
             std::cout<<"ok:------------------ok"<<fine_angle<<std::endl;
-            float fine_angle = -66*DEG2RAD;
-            GriperMove(fine_angle);
+            // float fine_angle = -66*DEG2RAD;
+            GriperMove(fine_angle*DEG2RAD);
             m_state_ = ST_WAIT;
 
         }
@@ -836,8 +836,13 @@ void CvDetection::ProcessState() {
             /*拧+松爪*/
             std::cout<<"m_state : ST_FINE_ACTION_CIRCLE_BACK "<<std::endl;
             xarm_c.gripperMove(220);
-            float fine_angle = 28*DEG2RAD;
-            GriperMove(fine_angle);
+            float fine_angle_back;
+            if(fine_angle == 66){
+                fine_angle_back = 28*DEG2RAD;
+            }else{
+                fine_angle_back = -28*DEG2RAD;
+            }
+            GriperMove(fine_angle_back);
             xarm_c.gripperMove(460);
             m_state_ = ST_COMPLETE;
 
