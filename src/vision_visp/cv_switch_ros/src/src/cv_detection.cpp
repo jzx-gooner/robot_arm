@@ -334,7 +334,7 @@ void CvDetection::init()
 
 }
 
-void CvDetection::detection_infer(cv::Mat img)
+void CvDetection::detection_infer(cv::Mat img,bool save_img)
 {
     m_objetsin2Dimage.clear(); //清空上一幅图像的目标
     auto detection_image = img.clone();
@@ -390,13 +390,17 @@ void CvDetection::detection_infer(cv::Mat img)
         // cv::resize(color_mat,show_img,cv::Size(800,640));
         cv::imshow("detection_result",detection_image);
         cv::waitKey(1);
+        if(save_img){
+            std::cout<<"save image"<<std::endl;
+            cv::imwrite("logs/detection.jpg",detection_image);
+        }
         we_got_something = true;
     }
 
 }
 
 
-void CvDetection::segmentation_infer(cv::Mat img){
+void CvDetection::segmentation_infer(cv::Mat img,bool save_img){
         auto segmentation_image = img.clone();
         auto segmentation_img = cs->inference(segmentation_image);
         cv::Mat binary_image,gray_image;
@@ -474,18 +478,17 @@ void CvDetection::segmentation_infer(cv::Mat img){
                     std::cout<<"slope 大于0"<<std::endl;
                     fine_angle = -52;
                 }
-
-                
                 // auto caption = cv::format("%s %s %s ",fine_x,fine_y,fine_z);
                 // cv::putText(segmentation_image, caption, cv::Point(40, 60), 0, 1, cv::Scalar::all(0), 2, 16);
                 // std::cout<<"fine_angle : "<<fine_angle<<std::endl;
-
-                
                 }
         cv::Mat show_img;
         cv::resize(segmentation_image,show_img,cv::Size(600,400));
         cv::imshow("segmentation_result", show_img);
         cv::waitKey(1); 
+        if(save_img){
+            cv::imwrite("logs/segmentation.jpg",segmentation_image);
+        }
 
 }
 void CvDetection::template_match_infer(cv::Mat img){
@@ -809,8 +812,8 @@ void CvDetection::ProcessState() {
             std::cout<<"m_state : ST_FINE_DETECTION "<<std::endl;
             //如果是segmentation
             //如果是模板匹配 这个地方更新一下角度和具体三维坐标 todo ：
-            detection_infer(color_mat);
-            segmentation_infer(color_mat);
+            detection_infer(color_mat,true);
+            segmentation_infer(color_mat,true);
             //可能有检测不到的情况发生，如果有检测不到的情况
             int index = 0;
             auto location = m_objetsin2Dimage[index];
