@@ -854,7 +854,7 @@ void CvDetection::ProcessState() {
             set_arm_x_ = fine_x+1;
             set_arm_y_ = fine_y;
             set_arm_z_ = fine_z;
-            std::vector<float> move_postition{fine_x+4, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
+            std::vector<float> move_postition{fine_x-20, fine_y,fine_z,xarm_state[3], xarm_state[4], xarm_state[5]};
             ArmMove(move_postition);
             IS_AFTER_ST_FINE_ACTION_MOVE_ = true;
             m_state_ =  ST_CHECK_ARM_ARRIVE;
